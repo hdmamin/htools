@@ -18,6 +18,11 @@ class LambdaDict(dict):
         return self[key]
 
 
+def hdir(obj):
+    """Print object methods and attributes, excluding magic methods."""
+    return [d for d in dir(obj) if not d.startswith('_')]
+
+
 def hmail(subject, message, to_email, from_email='hmamin55@gmail.com'):
     """Send an email.
 
