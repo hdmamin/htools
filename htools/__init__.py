@@ -3,8 +3,6 @@ import pandas as pd
 import smtplib
 import time
 
-import stats
-
 
 class LambdaDict(dict):
     """Create a default dict where the default function can accept parameters.
