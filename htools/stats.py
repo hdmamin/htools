@@ -54,6 +54,7 @@ def plot_permutation_results(data, stat):
     stat : str
         Specify what statistic the test is for. One of ('mean', 'std').
     """
+    sns.set_style('darkgrid')
     fig, ax = plt.subplots(2, 2, figsize=(12, 6))
     plt.subplots_adjust(hspace=.4)
     for i, d in enumerate(delta):

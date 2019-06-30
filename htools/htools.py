@@ -73,7 +73,7 @@ def htimer(func):
     def wrapper(*args, **kwargs):
         start = time.time()
         output = func(*args, **kwargs)
-        (print(f'\n[TIMER]: function <{func.__name__}> executed in roughly '
-            f'{round(time.time() - start, 4)} seconds (conservatively).\n'))
+        print(f'\n[TIMER]: function <{func.__name__}> executed in roughly '
+              f'{round(time.time() - start, 4)} seconds (conservatively).\n')
         return output
     return wrapper
