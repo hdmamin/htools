@@ -1,5 +1,6 @@
 from email.mime.text import MIMEText
 import smtplib
+import sys
 import time
 
 
@@ -60,3 +61,11 @@ def htimer(func):
               f'{round(time.time() - start, 4)} seconds (conservatively).\n')
         return output
     return wrapper
+
+
+def print_object_sizes(limit=None, exclude_underscore=True):
+    """Print the variable names and sizes of the currently defined objects."""
+    var_size = [(var, sys.getsizeof(obj)) for var, obj in locals().items()]
+    for var, size in sorted(var_size, key=lambda x: -x[1])[:limit]:
+        if not var.startswith('_') or not exclude_underscore:
+            print(var, size)

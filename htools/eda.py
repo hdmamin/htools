@@ -39,6 +39,9 @@ def top_cats(df, col, cats=None, val=None):
 
     Parameters
     -----------
+    df: pd.DataFrame
+    col: str
+        Name of column to filter on.
     cats: int
         Optional - # of categories to include (i.e. top 5 most common
         categories).
