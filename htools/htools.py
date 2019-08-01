@@ -63,9 +63,21 @@ def htimer(func):
     return wrapper
 
 
-def print_object_sizes(limit=None, exclude_underscore=True):
-    """Print the variable names and sizes of the currently defined objects."""
-    var_size = [(var, sys.getsizeof(obj)) for var, obj in locals().items()]
+def print_object_sizes(space, limit=None, exclude_underscore=True):
+    """Print the object names and sizes of the currently defined objects.
+
+    Parameters
+    -----------
+    space: dict
+        locals(), globals(), or vars()
+    limit: int or None
+        Optionally limit the number of objects displayed (default None for no
+        limit).
+    exclude_underscore: bool
+        Determine whether to exclude objects whose names start with an
+        underscore (default True).
+    """
+    var_size = [(var, sys.getsizeof(obj)) for var, obj in space.items()]
     for var, size in sorted(var_size, key=lambda x: -x[1])[:limit]:
         if not var.startswith('_') or not exclude_underscore:
             print(var, size)
