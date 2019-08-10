@@ -17,9 +17,7 @@ class BaseModel(nn.Module):
 
     def layer_stats(self):
         """Check mean and standard deviation of each layer's weights."""
-        return [(round(p.data.mean().item(), 3),
-                 round(p.data.std().item(), 3))
-                for p in self.parameters()]
+        return [quick_stats(p.data, 3) for p in self.parameters()]
 
     def plot_weights(self):
         n_layers = len(self.dims())
