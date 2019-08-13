@@ -66,45 +66,80 @@ def htimer(func):
 
 
 def hsplit(text, sep, group=True, attach=True):
+    """Flexible string splitting that retains the delimiter rather, unlike
+    the built-in str.split() method.
+
+    Parameters
+    -----------
+    text: str
+        The input text to be split.
+    sep: str
+        The delimiter to be split on.
+    group: bool
+        Specifies whether to group consecutive delimiters together (True),
+        or to separate them (False).
+    attach: bool
+        Specifies whether to attach the delimiter to the string that preceeds
+        it (True), or to detach it so it appears in the output list as its own
+        item (False).
+
+    Returns
+    --------
+    list[str]
+
+    Examples
+    ---------
+    text = "Score -- Giants win 6-5"
+    sep = '-'
+
+    # Case 0.1: Delimiters are grouped together and attached to the preceding
+    word.
+    >> hsplit(text, sep, group=True, attach=True)
+    >> ['Score --', ' Giants win 6-', '5']
+
+    # Case 0.2: Delimiters are grouped together but are detached from the
+    preceding word, instead appearing as their own item in the output list.
+    >> hsplit(text, sep, group=True, attach=False)
+    >> ['Score ', '--', ' Giants win 6', '-', '5']
+
+    Case 1.1: Delimiters are retained and attached to the preceding string.
+    If the delimiter occurs multiple times consecutively, only the first
+    occurrence is attached, and the rest appear as individual items in the
+    output list.
+    >> hsplit(text, sep, group=False, attach=True)
+    >> ['Score -', '-', ' Giants win 6-', '5']
+
+    # Case 1.2: Delimiters are retained but are detached from the preceding
+    string.
+    It appears as its own item in the output list.
+    >> hsplit(text, sep, group=False, attach=False)
+    >> ['Score ', '-', '-', ' Giants win 6', '-', '5']
+    """
     sep_re = re.escape(sep)
     regex = f'[^{sep_re}]*{sep_re}*'
 
-    # Case 0: Split whenever delimiter occurs. Even if the delimiter occurs
-    # many times in a row, a single split occurs.
+    ##########################################################################
+    # Case 0: Consecutive delimiters are grouped together.
+    ##########################################################################
     if group:
-
-        # Subcase 0.1: All delimiters are attached to the preceding word.
+        # Subcase 0.1
         if attach:
             return [word for word in re.findall(regex, text)][:-1]
 
-        # Subcase 0.2: multiple characters, detach from word
+        # Subcase 0.2
         else:
             return [word for word in re.split(f'({sep_re}+)', text) if word]
 
-    # Case 1: Single delimiters only.
+    ##########################################################################
+    # Case 1: Consecutive delimiters are NOT grouped together.
+    ##########################################################################
     words = text.split(sep)
 
-    # Subcase 1.1: Delimiter is retained and attached to the preceding string.
-    # If the delimiter occurs multiple times consecutively, only the first
-    # occurrence is attached.
+    # Subcase 1.1
     if attach:
+        return [word for word in re.findall(regex[:-1]+'?', text) if word]
 
-        # testing 1
-#         words = [word + sep for word in words if word]
-
-        # testing 2
-#         words = [word + sep for word in words]
-#         if not text.endswith(sep):
-#             words[-1] = words[-1].rstrip(sep)
-#         else:
-#             words.pop(-1)
-
-        # testing 3
-#         regex = f'[^{sep_re}]*{sep_re}'
-        return [word for word in re.findall(regex[:-1] + '?', text) if word]
-
-#     Subcase 1.2: Delimiter is retained and included as its own item in list.
-#     return [item for pair in zip(words, [sep]*(len(words))) for item in pair if item]
+    # Subcase 1.2
     return [word for word in chain(*zip(words, [sep]*len(words))) if word][:-1]
 
 
