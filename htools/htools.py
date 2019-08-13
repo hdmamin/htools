@@ -1,4 +1,6 @@
 from email.mime.text import MIMEText
+from itertools import chain
+import re
 import smtplib
 import sys
 import time
@@ -61,6 +63,49 @@ def htimer(func):
               f'{round(time.time() - start, 4)} seconds (conservatively).\n')
         return output
     return wrapper
+
+
+def hsplit(text, sep, group=True, attach=True):
+    sep_re = re.escape(sep)
+    regex = f'[^{sep_re}]*{sep_re}*'
+
+    # Case 0: Split whenever delimiter occurs. Even if the delimiter occurs
+    # many times in a row, a single split occurs.
+    if group:
+
+        # Subcase 0.1: All delimiters are attached to the preceding word.
+        if attach:
+            return [word for word in re.findall(regex, text)][:-1]
+
+        # Subcase 0.2: multiple characters, detach from word
+        else:
+            return [word for word in re.split(f'({sep_re}+)', text) if word]
+
+    # Case 1: Single delimiters only.
+    words = text.split(sep)
+
+    # Subcase 1.1: Delimiter is retained and attached to the preceding string.
+    # If the delimiter occurs multiple times consecutively, only the first
+    # occurrence is attached.
+    if attach:
+
+        # testing 1
+#         words = [word + sep for word in words if word]
+
+        # testing 2
+#         words = [word + sep for word in words]
+#         if not text.endswith(sep):
+#             words[-1] = words[-1].rstrip(sep)
+#         else:
+#             words.pop(-1)
+
+        # testing 3
+#         regex = f'[^{sep_re}]*{sep_re}'
+        return [word for word in re.findall(regex[:-1] + '?', text) if word]
+
+#     Subcase 1.2: Delimiter is retained and included as its own item in list.
+#     return [item for pair in zip(words, [sep]*(len(words))) for item in pair if item]
+    return [word for word in chain(*zip(words, [sep]*len(words))) if word][:-1]
 
 
 def print_object_sizes(space, limit=None, exclude_underscore=True):

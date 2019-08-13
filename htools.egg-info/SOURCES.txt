@@ -1,6 +1,0 @@
-htools/__init__.py
-htools.egg-info/PKG-INFO
-htools.egg-info/SOURCES.txt
-htools.egg-info/dependency_links.txt
-htools.egg-info/not-zip-safe
-htools.egg-info/top_level.txt
