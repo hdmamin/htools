@@ -5,24 +5,38 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 
-class BaseModel(nn.Module):
+class ModelMixin:
+    """Mixin to add some convenient functionality to PyTorch models.
 
-    subclasses = []
+    As shown below, the child class should inherit from ModelMixin, then
+     nn.Module in that order. locals() must be passed to the
+    super().__init__() method so we can record how the model was
+    initialized, which is convenient when saving and loading models.
+
+    Examples
+    ---------
+    class ConvNet(ModelMixin, nn.Module):
+        def __init__(self, x_dim, batch_norm=True):
+            super().__init__(locals())
+            self.x_dim = x_dim
+            self.batch_norm = batch_norm
+        def forward(self, x):
+            ...
+
+    cnn = ConvNet(3)
+
+    While training, we can save weights and other information by calling:
+    >>> cnn.save(epoch_num)
+
+    Then later, to load the model:
+    >>> model = ConvNet.from_path('data/model_4.pth')
+    """
 
     def __init__(self, init_variables):
-        """Subclasses of BaseModel must pass locals() to their
-        super().__init__() method. These will be used to record how the model
-        was initialized to allow the from_path() factory method to work.
-        """
         super().__init__()
-        del init_variables['self']
-        del init_variables['__class__']
+        init_variables.pop('self', None)
+        init_variables.pop('__class__', None)
         self._init_variables = init_variables
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        print(f'call init_subclass: {cls}')
-        cls.subclasses.append(cls)
 
     def dims(self):
         """Get shape of each layer's weights."""
@@ -77,8 +91,6 @@ class BaseModel(nn.Module):
         if verbose:
             print(f'Weights saved from epoch {epoch}.')
 
-    # IN PROGRESS - CURRENTLY RETURNS SUPERCLASS, NOT SUBCLASS. But in simple
-    # toy example it does return subclass - not sure what diff is.
     @classmethod
     def from_path(cls, path, verbose=True):
         """Factory method to load a model from a file containing saved weights.
@@ -92,16 +104,14 @@ class BaseModel(nn.Module):
             loaded and what mode the model is in.
         """
         data = torch.load(path)
-        print(data['params'])
-        print(str(cls))
-        print('SUB')
         model = cls(**data['params'])
         model.load_state_dict(data['weights'])
         model.eval()
 
         if verbose:
-            print(f'Weights loaded from epoch {data["epoch"]}. '
-                  'Currently in eval mode.')
+            print(f'Epoch {data["epoch"]} weights loaded from {path}.'
+                  f'\nModel parameters: {data["params"]}'
+                  '\nCurrently in eval mode.')
         return model
 
 
@@ -207,9 +217,9 @@ class ResBlock(nn.Module):
         return self.activation(x + x_out)
 
 
-def stats(x):
+def stats(x, digits=3):
     """Quick wrapper to get mean and standard deviation of a tensor."""
-    return round(x.mean().item(), 4), round(x.std().item(), 4)
+    return round(x.mean().item(), digits), round(x.std().item(), digits)
 
 
 def variable_lr_optimizer(groups, lrs, optimizer=torch.optim.Adam, **kwargs):
