@@ -110,8 +110,7 @@ def hsplit(text, sep, group=True, attach=True):
     >> ['Score -', '-', ' Giants win 6-', '5']
 
     # Case 1.2: Delimiters are retained but are detached from the preceding
-    string.
-    It appears as its own item in the output list.
+    string. Each instance appears as its own item in the output list.
     >> hsplit(text, sep, group=False, attach=False)
     >> ['Score ', '-', '-', ' Giants win 6', '-', '5']
     """
