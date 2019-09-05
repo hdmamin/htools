@@ -5,6 +5,8 @@ import smtplib
 import sys
 import time
 
+from htools.config import GMAIL_ACCOUNT, GMAIL_CREDS_FILE
+
 
 class LambdaDict(dict):
     """Create a default dict where the default function can accept parameters.
@@ -26,7 +28,7 @@ def hdir(obj):
     return [x for x in dir(obj) if not x.startswith('_')]
 
 
-def hmail(subject, message, to_email, from_email='hmamin55@gmail.com'):
+def hmail(subject, message, to_email, from_email=GMAIL_ACCOUNT):
     """Send an email.
 
     :param from_email: Gmail address being used to send email.
@@ -36,7 +38,7 @@ def hmail(subject, message, to_email, from_email='hmamin55@gmail.com'):
     :return: None.
     """
     # Load credentials.
-    with open('/Users/hmamin/creds/gmail.csv', 'r') as f:
+    with open(GMAIL_CREDS_FILE, 'r') as f:
         creds = dict([line.strip().split(',') for line in f])
     password = creds[from_email]
 

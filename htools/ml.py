@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 
 
 class BaseModel(nn.Module):
-    """Mixin to add some convenient functionality to PyTorch models.
+    """Parent class for Pytorch models that provides some convenient
+    functionality.
 
     As shown below, the child class should inherit from BaseModel.
     locals() must be passed to the super().__init__() method so we can record
@@ -59,7 +60,8 @@ class BaseModel(nn.Module):
         plt.tight_layout()
         plt.show()
 
-    def save(self, epoch, dir_='data', file='model', verbose=True, **kwargs):
+    def save(self, epoch, dir_='data', file='model', overwrite=False,
+             verbose=True, **kwargs):
         """Save model weights.
 
         Parameters
@@ -71,6 +73,9 @@ class BaseModel(nn.Module):
         file: str
             The first part of the file name to save the weights to. The epoch
             and file extension will be added automatically.
+        overwrite: bool
+            If True, will overwrite existing weights files if they share the
+            same name. If False, will ________.
         verbose: bool
             If True, print message to notify user that weights have been saved.
         **kwargs: any type
@@ -78,8 +83,11 @@ class BaseModel(nn.Module):
             (e.g. optimizer state dict).
         """
         os.makedirs(dir_, exist_ok=True)
-        file = f'{file}_{epoch}.pth'
+        file = f'{file}_e{epoch}'
         path = os.path.join(dir_, file)
+        if os.path.exists(path + '.pth') and not overwrite:
+            path += '_v2'
+        path += '.pth'
 
         data = dict(weights=self.state_dict(),
                     epoch=epoch,
@@ -88,7 +96,7 @@ class BaseModel(nn.Module):
         torch.save(data, path)
 
         if verbose:
-            print(f'Weights saved from epoch {epoch}.')
+            print(f'Epoch {epoch} weights saved to {path}.')
 
     @classmethod
     def from_path(cls, path, verbose=True):
@@ -221,7 +229,40 @@ def stats(x, digits=3):
     return round(x.mean().item(), digits), round(x.std().item(), digits)
 
 
-def variable_lr_optimizer(groups, lrs, optimizer=torch.optim.Adam, **kwargs):
+# def variable_lr_optimizer(groups, lrs, optimizer=torch.optim.Adam, **kwargs):
+#     """Get an optimizer that uses different learning rates for different layer
+#     groups. Additional keyword arguments can be used to alter momentum and/or
+#     weight decay, for example, but for the sake of simplicity these values
+#     will be the same across layer groups.
+#
+#     Parameters
+#     -----------
+#     groups: nn.ModuleList
+#         For this use case, the model should contain a ModuleList of layer
+#         groups in the form of Sequential objects. This variable is then passed
+#         in so each group can receive its own learning rate.
+#     lrs: list[float]
+#         A list containing the learning rates to use for each layer group. This
+#         should be the same length as the number of layer groups in the model.
+#         At times, we may want to use the same learning rate for all groups,
+#         and can achieve this by passing in a list containing a single float.
+#     optimizer: torch optimizer
+#         The Torch optimizer to be created (Adam by default).
+#
+#     Examples
+#     ---------
+#     optim = variable_lr_optimizer(model.groups, [3e-3, 3e-2, 1e-1])
+#     """
+#     if len(lrs) == 1:
+#         lrs *= len(groups)
+#
+#     data = [{'params': group.parameters(), 'lr': lr}
+#             for group, lr in zip(groups, lrs)]
+#     return optimizer(data, **kwargs)
+
+
+def variable_lr_optimizer(model=None, groups=None, lrs=[3e-3],
+                          optimizer=torch.optim.Adam, **kwargs):
     """Get an optimizer that uses different learning rates for different layer
     groups. Additional keyword arguments can be used to alter momentum and/or
     weight decay, for example, but for the sake of simplicity these values
@@ -229,7 +270,9 @@ def variable_lr_optimizer(groups, lrs, optimizer=torch.optim.Adam, **kwargs):
 
     Parameters
     -----------
-    groups: nn.ModuleList
+    model: nn.Module
+        model.parameters() generator.
+    groups: nn.ModuleList (optional)
         For this use case, the model should contain a ModuleList of layer
         groups in the form of Sequential objects. This variable is then passed
         in so each group can receive its own learning rate.
@@ -245,8 +288,12 @@ def variable_lr_optimizer(groups, lrs, optimizer=torch.optim.Adam, **kwargs):
     ---------
     optim = variable_lr_optimizer(model.groups, [3e-3, 3e-2, 1e-1])
     """
-    if len(lrs) == 1:
-        lrs *= len(groups)
+    assert bool(model is None) + bool(groups is None) == 1
+
+    if model is not None:
+        groups = [model]
+
+    assert len(groups) == len(lrs)
 
     data = [{'params': group.parameters(), 'lr': lr}
             for group, lr in zip(groups, lrs)]
