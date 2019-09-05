@@ -5,17 +5,16 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 
-class ModelMixin:
+class BaseModel(nn.Module):
     """Mixin to add some convenient functionality to PyTorch models.
 
-    As shown below, the child class should inherit from ModelMixin, then
-     nn.Module in that order. locals() must be passed to the
-    super().__init__() method so we can record how the model was
-    initialized, which is convenient when saving and loading models.
+    As shown below, the child class should inherit from BaseModel.
+    locals() must be passed to the super().__init__() method so we can record
+    how the model was initialized, which is convenient for saving and loading.
 
     Examples
     ---------
-    class ConvNet(ModelMixin, nn.Module):
+    class ConvNet(BaseModel):
         def __init__(self, x_dim, batch_norm=True):
             super().__init__(locals())
             self.x_dim = x_dim
@@ -29,7 +28,7 @@ class ModelMixin:
     >>> cnn.save(epoch_num)
 
     Then later, to load the model:
-    >>> model = ConvNet.from_path('data/model_4.pth')
+    >>> cnn_trained = ConvNet.from_path('data/model_4.pth')
     """
 
     def __init__(self, init_variables):
