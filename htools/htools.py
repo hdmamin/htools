@@ -1,5 +1,7 @@
 from email.mime.text import MIMEText
 from itertools import chain
+import os
+import pickle
 import re
 import smtplib
 import sys
@@ -162,3 +164,20 @@ def print_object_sizes(space, limit=None, exclude_underscore=True):
     for var, size in sorted(var_size, key=lambda x: -x[1])[:limit]:
         if not var.startswith('_') or not exclude_underscore:
             print(var, size)
+
+
+def save_pickle(obj, fname, dir_name='data'):
+    """Wrapper to quickly save a pickled object."""
+    if not os.path.exists(dir_name):
+        os.mkdir(dir_name)
+    path = os.path.join(dir_name, f'{fname}.pkl')
+    with open(path, 'wb') as f:
+        pickle.dump(obj, f)
+    print(f'Data written to {path}.')
+
+
+def load_pickle(fname, dir_name='data'):
+    """Wrapper to quickly load a pickled object."""
+    with open(os.path.join(dir_name, f'{fname}.pkl'), 'rb') as f:
+        data = pickle.load(f)
+    return data
