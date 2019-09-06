@@ -37,6 +37,7 @@ class BaseModel(nn.Module):
         init_variables.pop('self', None)
         init_variables.pop('__class__', None)
         self._init_variables = init_variables
+        self.weight_dir = 'data'
 
     def dims(self):
         """Get shape of each layer's weights."""
@@ -60,7 +61,7 @@ class BaseModel(nn.Module):
         plt.tight_layout()
         plt.show()
 
-    def save(self, epoch, dir_='data', file='model', overwrite=False,
+    def save(self, epoch, dir_=None, file='model', overwrite=False,
              verbose=True, **kwargs):
         """Save model weights.
 
@@ -69,31 +70,34 @@ class BaseModel(nn.Module):
         epoch: int
             The epoch of training the weights correspond to.
         dir_: str
-            The directory which will contain the output file.
+            Only needs to be passed in the first time to set the weight
+            directory for the model. If never passed in, the default directory
+            of 'data' will be used.
         file: str
             The first part of the file name to save the weights to. The epoch
             and file extension will be added automatically.
         overwrite: bool
             If True, will overwrite existing weights files if they share the
-            same name. If False, will ________.
+            same name. If False, will raise an error if the file already
+            exists and save normally otherwise.
         verbose: bool
             If True, print message to notify user that weights have been saved.
         **kwargs: any type
             User can optionally provide additional information to save
             (e.g. optimizer state dict).
         """
-        os.makedirs(dir_, exist_ok=True)
-        file = f'{file}_e{epoch}'
-        path = os.path.join(dir_, file)
-        if os.path.exists(path + '.pth') and not overwrite:
-            path += '_v2'
-        path += '.pth'
+        if dir_:
+            self.weight_dir = dir_
+        os.makedirs(self.weight_dir, exist_ok=True)
+
+        path = os.path.join(self.weight_dir, f'{file}_e{epoch}.pth')
+        if os.path.exists(path) and not overwrite:
+            raise FileExistsError
 
         data = dict(weights=self.state_dict(),
                     epoch=epoch,
                     params=self._init_variables)
-        data = {**data, **kwargs}
-        torch.save(data, path)
+        torch.save({**data, **kwargs}, path)
 
         if verbose:
             print(f'Epoch {epoch} weights saved to {path}.')
@@ -101,6 +105,8 @@ class BaseModel(nn.Module):
     @classmethod
     def from_path(cls, path, verbose=True):
         """Factory method to load a model from a file containing saved weights.
+        Note that this will return a new model in eval mode, since the intended
+        use case is inference.
 
         Parameters
         -----------
@@ -120,6 +126,48 @@ class BaseModel(nn.Module):
                   f'\nModel parameters: {data["params"]}'
                   '\nCurrently in eval mode.')
         return model
+
+    def load_epoch(self, epoch, mode='train', verbose=True):
+        """Load previously saved weights. Note that this differs from
+        `from_path()` method in several ways:
+        -Nothing is returned since we are not creating a new model.
+        -By default, model is returned in training mode, since the intended
+        use is to quickly revert to a desired set of weights while trianing.
+        -This is called on a model instance, whereas from_path is a class
+        method used to construct a new object.
+
+        Parameters
+        -----------
+        epoch: int
+            The epoch of training to load weights from.
+        mode: str
+            Specifies whether to leave the model in train or eval mode.
+            Options: ('train', 'eval').
+        verbose: bool
+            If True, print message notifying user which weights have been
+            loaded and what mode the model is in.
+
+        Examples
+        ---------
+        model = CNN()
+        for epoch in range(epochs):
+            # Code for forward and backward pass.
+            model.save(epoch)
+
+        model.load_epoch(5)
+
+        """
+        fname = [file for file in os.listdir(self.weight_dir)
+                 if file.endswith(f'_e{epoch}.pth')][0]
+        path = os.path.join(self.weight_dir, fname)
+        data = torch.load(path)
+        self.load_state_dict(data['weights'])
+        getattr(self, mode)
+
+        if verbose:
+            print(f'Epoch {epoch} weights loaded from {path}. '
+                  f'\nModel parameters: {data["params"]}'
+                  f'\nCurrently in {mode} mode.')
 
 
 class GRelu(nn.Module):
