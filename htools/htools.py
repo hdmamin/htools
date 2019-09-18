@@ -53,32 +53,28 @@ def hdir(obj, magics=False, internals=False):
         Keys are method/attribute names, values are strings specifying whether
         the corresponding key is a 'method' or an 'attr'.
     """
-    labelled = {attr: ('method' if callable(getattr(obj, attr)) else 'attr')
-                for attr in dir(obj)}
+    out = {attr: ('method' if callable(getattr(obj, attr)) else 'attribute')
+           for attr in dir(obj)}
     if magics and internals:
-        return labelled
+        return out
 
-    def make_attr_filter(magics, internals):
-        def filter_(attr):
-            # Magic methods.
-            if attr.startswith('__'):
-                if not magics:
-                    return False
-                return True
-
-            # Internal methods.
-            if attr.startswith('_'):
-                if not internals:
-                    return False
-                return True
-
-            # Regular methods.
+    def keep_attr(attr, magics, internals):
+        # Magic methods.
+        if attr.startswith('__'):
+            if not magics:
+                return False
             return True
 
-        return filter_
+        # Internal methods.
+        if attr.startswith('_'):
+            if not internals:
+                return False
+            return True
 
-    attr_filter = make_attr_filter(magics, internals)
-    return {k: v for k, v in labelled.items() if attr_filter(k)}
+        # Regular methods.
+        return True
+
+    return {k: v for k, v in out.items() if keep_attr(k, magics, internals)}
 
 
 def hmail(subject, message, to_email, from_email=GMAIL_ACCOUNT):
