@@ -17,6 +17,14 @@ class LambdaDict(dict):
     """
 
     def __init__(self, default_function):
+        """
+        Parameters
+        ----------
+        default_function: function
+            When referencing a key in a LambdaDict object that has not been
+            added yet, the value will be the output of this function called
+            with the key passed in as an argument.
+        """
         super().__init__()
         self.f = default_function
 
@@ -25,19 +33,71 @@ class LambdaDict(dict):
         return self[key]
 
 
-def hdir(obj):
-    """Print object methods and attributes, excluding magic methods."""
-    return [x for x in dir(obj) if not x.startswith('_')]
+def hdir(obj, magics=False, internals=False):
+    """Print object methods and attributes, by default excluding magic methods.
+
+    Parameters
+    -----------
+    obj: any type
+        The object to print methods and attributes for.
+    magics: bool
+        Specifies whether to include magic methods (e.g. __name__, __hash__).
+        Default False.
+    internals: bool
+        Specifies whether to include internal methods (e.g. _dfs, _name).
+        Default False.
+
+    Returns
+    --------
+    dict
+        Keys are method/attribute names, values are strings specifying whether
+        the corresponding key is a 'method' or an 'attr'.
+    """
+    labelled = {attr: ('method' if callable(getattr(obj, attr)) else 'attr')
+                for attr in dir(obj)}
+    if magics and internals:
+        return labelled
+
+    def make_attr_filter(magics, internals):
+        def filter_(attr):
+            # Magic methods.
+            if attr.startswith('__'):
+                if not magics:
+                    return False
+                return True
+
+            # Internal methods.
+            if attr.startswith('_'):
+                if not internals:
+                    return False
+                return True
+
+            # Regular methods.
+            return True
+
+        return filter_
+
+    attr_filter = make_attr_filter(magics, internals)
+    return {k: v for k, v in labelled.items() if attr_filter(k)}
 
 
 def hmail(subject, message, to_email, from_email=GMAIL_ACCOUNT):
     """Send an email.
 
-    :param from_email: Gmail address being used to send email.
-    :param to_email: Recipient's email.
-    :param subject: Subject line of email (str).
-    :param message: Body of email (str).
-    :return: None.
+    Parameters
+    -----------
+    from_email: str
+        Gmail address being used to send email.
+    to_email: str
+        Recipient's email.
+    subject: str
+        Subject line of email.
+    message: str
+        Body of email.
+
+    Returns
+    --------
+    None.
     """
     # Load credentials.
     with open(GMAIL_CREDS_FILE, 'r') as f:
@@ -59,7 +119,27 @@ def hmail(subject, message, to_email, from_email=GMAIL_ACCOUNT):
 
 
 def htimer(func):
-    """Provide conservative time estimate for a function to run."""
+    """Provide conservative time estimate for a function to run. Behavior may
+    not be interpretable for recursive functions.
+
+    Parameters
+    -----------
+    func: function
+        The function to time.
+
+    Examples
+    ---------
+    import time
+
+    @htimer
+    def count_to(x):
+        for i in range(x):
+            time.sleep(0.5)
+
+    >>> count_to(10)
+    [TIMER]: function <count_to> executed in roughly 5.0365 seconds
+    (conservatively).
+    """
     def wrapper(*args, **kwargs):
         start = time.time()
         output = func(*args, **kwargs)
