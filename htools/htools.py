@@ -53,28 +53,26 @@ def hdir(obj, magics=False, internals=False):
         Keys are method/attribute names, values are strings specifying whether
         the corresponding key is a 'method' or an 'attr'.
     """
-    out = {attr: ('method' if callable(getattr(obj, attr)) else 'attribute')
-           for attr in dir(obj)}
-    if magics and internals:
-        return out
+    output = dict()
+    for attr in dir(obj):
+        # Exclude magics or internals if specified.
+        if (not magics and attr.startswith('__')) or \
+           (not internals and re.match('_[^_]', attr)):
+            continue
 
-    def keep_attr(attr, magics, internals):
-        # Magic methods.
-        if attr.startswith('__'):
-            if not magics:
-                return False
-            return True
+        # Handle rare case where attr can't be invoked (e.g. df.sparse on a
+        # non-sparse Pandas dataframe).
+        try:
+            is_method = callable(getattr(obj, attr))
+        except Exception:
+            continue
 
-        # Internal methods.
-        if attr.startswith('_'):
-            if not internals:
-                return False
-            return True
-
-        # Regular methods.
-        return True
-
-    return {k: v for k, v in out.items() if keep_attr(k, magics, internals)}
+        # Update output to specify whether attr is callable.
+        if is_method:
+            output[attr] = 'method'
+        else:
+            output[attr] = 'attribute'
+    return output
 
 
 def hmail(subject, message, to_email, from_email=GMAIL_ACCOUNT):
