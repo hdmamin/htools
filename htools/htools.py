@@ -255,3 +255,40 @@ def load_pickle(fname, dir_name='data'):
     with open(os.path.join(dir_name, f'{fname}.pkl'), 'rb') as f:
         data = pickle.load(f)
     return data
+
+
+def dict_sum(*args):
+    """Given two or more dictionaries with numeric values, combine them into a
+     single dictionary. For keys that appear in multiple dictionaries, their
+     corresponding values are added to produce the new value.
+
+     This differs from combining two dictionaries in the following manner:
+
+     {**d1, **d2}
+
+     The method shown above will combine the keys but will retain the value
+     from d2, rather than adding the values from d1 and d2.
+
+    Parameters
+    -----------
+    *args: dicts
+        2 or more dictionaries with numeric values.
+
+    Returns
+    --------
+    dict: Contains all keys which appear in any of the dictionaries that are
+          passed in. The corresponding values from each dictionary containing a
+          given key are summed to produce the new value.
+
+    Examples
+    ---------
+    >>> d1 = {'a': 1, 'b': 2, 'c': 3}
+    >>> d2 = {'a': 10, 'c': -20, 'd': 30}
+    >>> d3 = {'c': 10, 'd': 5, 'e': 0}
+    >>> dict_sum(d1, d2)
+
+    {'a': 11, 'b': 2, 'c': -7, 'd': 35, 'e': 0}
+    """
+    keys = {key for d in args for key in d.keys()}
+    return {key: sum(d.get(key, 0) for d in args)
+            for key in keys}
