@@ -240,19 +240,41 @@ def print_object_sizes(space, limit=None, exclude_underscore=True):
             print(var, size)
 
 
-def save_pickle(obj, fname, dir_name='data'):
-    """Wrapper to quickly save a pickled object."""
-    if not os.path.exists(dir_name):
-        os.mkdir(dir_name)
-    path = os.path.join(dir_name, f'{fname}.pkl')
+def save_pickle(obj, fname, dir_name, verbose=True):
+    """Wrapper to quickly save a pickled object.
+
+    Parameters
+    -----------
+    obj: any
+        Object to pickle.
+    fname: str
+        Name of file to save to (ex: vocab.pkl).
+    dir_name: str
+        Directory containing file. This should include any relevant
+        subdirectories.
+    verbose: bool
+        If True, print a message confirming that the data was pickled, along
+        with its path.
+    """
+    os.makedirs(dir_name, exist_ok=True)
+    path = os.path.join(dir_name, fname)
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
-    print(f'Data written to {path}.')
+    if verbose:
+        print(f'Data written to {path}.')
 
 
-def load_pickle(fname, dir_name='data'):
-    """Wrapper to quickly load a pickled object."""
-    with open(os.path.join(dir_name, f'{fname}.pkl'), 'rb') as f:
+def load_pickle(fname, dir_name):
+    """Wrapper to quickly load a pickled object.
+
+    Parameters
+    -----------
+    fname: str
+        Name of file to load (ex: vocab.pkl).
+    dir_name: str
+        Directory containing file (ex: ../data/raw).
+    """
+    with open(os.path.join(dir_name, fname), 'rb') as f:
         data = pickle.load(f)
     return data
 
