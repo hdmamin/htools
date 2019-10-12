@@ -401,8 +401,8 @@ class InteractiveMagic(Magics):
         Examples
         ---------
         In the example below, each cell contains two statements. Notice that
-        the cell containing the magic only displays the last line of output,
-        while the other cells display both outputs.
+        the cell containing the magic displays no output, while the other cells
+        display the final output.
 
         >>> 5 + 10
         >>> 6 + 11
