@@ -10,7 +10,7 @@ import time
 from IPython.core.interactiveshell import InteractiveShell
 from IPython.core.magic import cell_magic, magics_class, Magics
 
-from htools.config import GMAIL_ACCOUNT, GMAIL_CREDS_FILE
+from htools.config import get_credentials, get_default_user
 
 
 class LambdaDict(dict):
@@ -78,7 +78,7 @@ def hdir(obj, magics=False, internals=False):
     return output
 
 
-def hmail(subject, message, to_email, from_email=GMAIL_ACCOUNT):
+def hmail(subject, message, to_email, from_email=None):
     """Send an email.
 
     Parameters
@@ -96,10 +96,15 @@ def hmail(subject, message, to_email, from_email=GMAIL_ACCOUNT):
     --------
     None.
     """
-    # Load credentials.
-    with open(GMAIL_CREDS_FILE, 'r') as f:
-        creds = dict([line.strip().split(',') for line in f])
-    password = creds[from_email]
+    # Load source email address.
+    from_email = from_email or get_default_user()
+    if not from_email:
+        return None
+
+    # Load email password.
+    password = get_credentials(from_email)
+    if not password:
+        return None
 
     # Create message instance.
     msg = MIMEText(message)
