@@ -1,5 +1,10 @@
 from IPython.core.interactiveshell import InteractiveShell
 from IPython.core.magic import cell_magic, magics_class, Magics
+from IPython.core.magic_arguments import (argument, magic_arguments,
+                                          parse_argstring)
+import warnings
+
+from htools import hdir
 
 
 @magics_class
@@ -108,4 +113,39 @@ class InteractiveMagic(Magics):
         InteractiveShell.ast_node_interactivity = 'all'
 
 
-get_ipython().register_magics(InteractiveMagic)
+@magics_class
+class WarningMagic(Magics):
+
+    @cell_magic
+    @magic_arguments()
+    @argument('-A', action='store_true', help='Warning mode: always.')
+    @argument('-P', action='store_true', help='Boolean flag. If passed, the '
+              'change will apply for the rest of the notebook, or until the '
+              'user changes it again. The default behavior is to apply the '
+              'change only to the current cell.')
+    def warn(self, line, cell):
+        """Silence warnings for a cell. If the default has been changed to
+        hide warnings, the -A flag can be used to show all warnings for a
+        cell. The -P flag will make the change persist, at least until the
+        user changes it again.
+        """
+        args = parse_argstring(self.warn, line)
+        flags = {flag for flag in hdir(args).keys() if getattr(args, flag)}
+
+        # Default is to ignore warnings. This is because warnings alerts you
+        # by default, so the typical use case is to silence warnings.
+        if 'A' in flags:
+            mode = 'always'
+        else:
+            mode = 'ignore'
+
+        # Change mode and run cell.
+        warnings.filterwarnings(mode)
+        get_ipython().run_cell(cell)
+
+        # Reset mode if change is note permanent.
+        if 'P' not in flags:
+            warnings.resetwarnings()
+
+
+get_ipython().register_magics(InteractiveMagic, WarningMagic)
