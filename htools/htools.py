@@ -319,3 +319,101 @@ def dict_sum(*args):
     keys = {key for d in args for key in d.keys()}
     return {key: sum(d.get(key, 0) for d in args)
             for key in keys}
+
+
+def differences(obj1, obj2, methods=False, **kwargs):
+    """Find the differences between two objects of the same type. This is a
+    way to get more detail beyond whether two objects are equal or not.
+
+    Parameters
+    -----------
+    obj1: any type
+        An object.
+    obj2: same type as obj1
+        An object.
+    methods: bool
+        If True, include methods in the comparison. If False, only attributes
+        will be compared. Note that the output may not be particularly
+        interpretable when using method=True; for instance when comparing two
+        strings consisting of different characters, we get a lot of output
+        that looks like this:
+
+        {'islower': (<function str.islower()>, <function str.islower()>),
+        'isupper': (<function str.isupper()>, <function str.isupper()>),...
+        'istitle': (<function str.istitle()>, <function str.istitle()>)}
+
+        These attributes all reflect the same difference: if obj1 is 'abc'
+        and obj2 is 'def', then
+        'abc' != 'def' and
+        'ABC' != 'DEF' abd
+        'Abc' != 'Def'.
+
+        When method=False, we ignore all of these, such that
+        differences('a', 'b') returns {}. Therefore, it is important to
+        carefully consider what differences you care about identifying.
+
+    **kwargs: bool
+        Can pass args to hdir to include magics or internals.
+
+    Returns
+    --------
+    dict[str, tuple]: Maps attribute name to a tuple of values, where the
+        first is the corresponding value for obj1 and the second is the
+        corresponding value for obj2.
+    """
+    attr1, attr2 = hdir(obj1, **kwargs), hdir(obj2, **kwargs)
+    assert type(obj1) == type(obj2), 'Objects must be the same type.'
+    assert attr1.keys() == attr2.keys(), 'Objects must have same attributes.'
+
+    diffs = {}
+    if obj1 == obj2:
+        return diffs
+    for (k1, v1), (k2, v2) in zip(attr1.items(), attr2.items()):
+        # Only compare non-callable attributes.
+        if not (methods or v1 == 'attribute'):
+            continue
+
+        # Comparisons work differently for numpy arrays.
+        val1, val2 = getattr(obj1, k1), getattr(obj2, k2)
+        try:
+            equal = (val1 == val2).all()
+        except AttributeError:
+            equal = val1 == val2
+
+        # Store values that are different for obj1 and obj2.
+        if not equal:
+            diffs[k1] = (val1, val2)
+
+    return diffs
+
+
+def catch(func, *args, verbose=False):
+    """Error handling for list comprehensions.
+
+    Parameters
+    -----------
+    func: function
+    *args: any type
+        Arguments to be passed to func.
+    verbose: bool
+        If True, print the error message should one occur.
+
+    Returns
+    --------
+    any type: If the function executes successfully, its output is returned.
+        Otherwise, return None.
+
+    Examples
+    ---------
+    [catch(lambda x: 1 / x, i) for i in range(3)]
+    >>> [None, 1.0, 0.5]
+
+    list(filter(None, [catch(lambda x: 1 / x, i) for i in range(3)]))
+    >>> [1.0, 0.5]
+    """
+    try:
+        return func(*args)
+    except Exception as e:
+        if verbose:
+            print(e)
+        return

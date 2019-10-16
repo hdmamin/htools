@@ -118,34 +118,47 @@ class WarningMagic(Magics):
 
     @cell_magic
     @magic_arguments()
-    @argument('-A', action='store_true', help='Warning mode: always.')
-    @argument('-P', action='store_true', help='Boolean flag. If passed, the '
+    @argument('-p', action='store_true', help='Boolean flag. If passed, the '
               'change will apply for the rest of the notebook, or until the '
               'user changes it again. The default behavior is to apply the '
               'change only to the current cell.')
-    def warn(self, line, cell):
-        """Silence warnings for a cell. If the default has been changed to
-        hide warnings, the -A flag can be used to show all warnings for a
-        cell. The -P flag will make the change persist, at least until the
-        user changes it again.
+    def lax(self, line, cell):
+        """Silence warnings for a cell. The -p flag can be used to make the
+        change persist, at least until the user changes it again.
         """
-        args = parse_argstring(self.warn, line)
-        flags = {flag for flag in hdir(args).keys() if getattr(args, flag)}
+        args = parse_argstring(self.lax, line)
+        self._warn(cell, 'ignore', args.p)
 
-        # Default is to ignore warnings. This is because warnings alerts you
-        # by default, so the typical use case is to silence warnings.
-        if 'A' in flags:
-            mode = 'always'
-        else:
-            mode = 'ignore'
+    @cell_magic
+    @magic_arguments()
+    @argument('-p', action='store_true', help='Boolean flag. If passed, the '
+              'change will apply for the rest of the notebook, or until the '
+              'user changes it again. The default behavior is to apply the '
+              'change only to the current cell.')
+    def nag(self, line, cell):
+        """Silence warnings for a cell. The -p flag can be used to make the
+        change persist, at least until the user changes it again.
+        """
+        args = parse_argstring(self.nag, line)
+        self._warn(cell, 'always', args.p)
 
-        # Change mode and run cell.
+    def _warn(self, cell, mode, persist):
+        """Base method for lax and nag. These could easily be handled in a
+        single method with optional flags, but I find the usage to be more
+        intuitive when the names are different, and generally prefer flag-free
+        magics since the goal is ease of use.
+
+        The persist flag is processed in the child methods because parsing
+        references the method that was called.
+        """
         warnings.filterwarnings(mode)
         get_ipython().run_cell(cell)
 
-        # Reset mode if change is note permanent.
-        if 'P' not in flags:
-            warnings.resetwarnings()
+        # Reset manually because warnings.resetwarnings() behaved erratically.
+        if not persist:
+            out_modes = {'ignore', 'always'}
+            out_modes.remove(mode)
+            warnings.filterwarnings(list(out_modes)[0])
 
 
 get_ipython().register_magics(InteractiveMagic, WarningMagic)
