@@ -75,6 +75,43 @@ def hdir(obj, magics=False, internals=False):
     return output
 
 
+def tdir(obj, methods=False, **kwargs):
+    """A variation of the built in `dir` function that shows the
+    attribute/method names as well as their types.
+
+    Parameters
+    ----------
+    obj: any type
+        The object to examine.
+    methods: bool
+        If True, include both methods and attributes in output. If False
+        (default behavior), only return attributes. Methods are more finicky
+        as they may require arguments, but attributes can generally be
+        retrieved without issue.
+    kwargs: bool
+        Additional arguments to be passed to hdir. Options are `magics` and
+        `internals`. See hdir documentation for more information.
+
+    Returns
+    -------
+    dict[str, type]: Dictionary mapping the name of the object's
+    methods/attributes to the corresponding types of those attributes.
+    """
+    out = dict()
+    for k, v in hdir(obj, **kwargs).items():
+        if v == 'attribute':
+            out[k] = type(getattr(obj, k))
+
+        # Only methods that don't require additional arguments are added.
+        elif methods and v == 'method':
+            try:
+                out[k] = type(getattr(obj, k)())
+            except TypeError:
+                continue
+
+    return out
+
+
 def hmail(subject, message, to_email, from_email=None):
     """Send an email.
 
