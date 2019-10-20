@@ -282,6 +282,31 @@ def print_object_sizes(space, limit=None, exclude_underscore=True):
             print(var, size)
 
 
+def eprint(arr, indent=2, spacing=1):
+    """Enumerated print. Prints an iterable with one item per line accompanied
+    by a number specifying its index in the iterable.
+
+    Parameters
+    -----------
+    arr: iterable
+        The object to be iterated over.
+    indent: int
+        Width to assign to column of integer indices. Default is 2, meaning
+        columns will line up as long as <100 items are being printed, which is
+        the expected use case.
+    spacing: int
+        Line spacing. Default of 1 will print each item on a new line with no
+        blank lines in between. Spacing of 2 will double space output, and so
+        on for larger values.
+
+    Returns
+    --------
+    None
+    """
+    for i, x in enumerate(arr):
+        print(f'{i:>{indent}}: {x}', end='\n'*spacing)
+
+
 def save_pickle(obj, fname, dir_name, verbose=True):
     """Wrapper to quickly save a pickled object.
 
