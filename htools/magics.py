@@ -102,7 +102,6 @@ class InteractiveMagic(Magics):
         >>> 3 + 1
 
 
-
         >>> 1 + 2
         >>> 3 + 4
 
@@ -184,16 +183,16 @@ class FunctionRacerMagic(Magics):
         implementations of a function to see which is fastest.
 
         %%race -n 10 -r 3
-        tokenizer_v1(text)
-        tokenizer_v2(text)
-        tokenizer_v3(text)
+        >>> tokenizer_v1(text)
+        >>> tokenizer_v2(text)
+        >>> tokenizer_v3(text)
 
         Example 2: If a function requires many arguments or if parameter
         names are long, consider passing in a list or dictionary of arguments.
 
         %%race
-        many_args_func_v1(**params)
-        many_args_func_v2(**params)
+        >>> many_args_func_v1(**params)
+        >>> many_args_func_v2(**params)
         """
         args = parse_argstring(self.race, line)
         n = args.n or 5
