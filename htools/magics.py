@@ -161,4 +161,51 @@ class WarningMagic(Magics):
             warnings.filterwarnings(list(out_modes)[0])
 
 
-get_ipython().register_magics(InteractiveMagic, WarningMagic)
+@magics_class
+class FunctionRacerMagic(Magics):
+
+    @cell_magic
+    @magic_arguments()
+    @argument('-n', help='Number of loops when timing functions (inner loop).')
+    @argument('-r', help='Number of runs when timing functions (outer loop).')
+    def race(self, line, cell):
+        """Time 2 or more functions to allow the user to easily compare speeds.
+        Each line will be timed separately, so a function call cannot take up
+        multiple lines. This is essentially a convenient wrapper for the
+        %%timeit magic that ensures all functions are timed with the same
+        choice of parameters. (When timing each function separately, I found
+        that during the testing process I would often end up changing some
+        function or timeit parameters in one case but forget to change it for
+        another. This magic aims to prevent that situation.)
+
+        Examples
+        ---------
+        Example 1: A fairly standard case where we time three possible
+        implementations of a function to see which is fastest.
+
+        %%race -n 10 -r 3
+        tokenizer_v1(text)
+        tokenizer_v2(text)
+        tokenizer_v3(text)
+
+        Example 2: If a function requires many arguments or if parameter
+        names are long, consider passing in a list or dictionary of arguments.
+
+        %%race
+        many_args_func_v1(**params)
+        many_args_func_v2(**params)
+        """
+        args = parse_argstring(self.race, line)
+        n = args.n or 5
+        r = args.r or 3
+
+        # Split cell into lines of code to execute.
+        rows = [row for row in cell.strip().split('\n')
+                if not row.startswith('#')]
+        prefix = f'%timeit -n {n} -r {r} '
+        for row in rows:
+            get_ipython().run_cell(prefix + row)
+
+
+get_ipython().register_magics(InteractiveMagic, WarningMagic,
+                              FunctionRacerMagic)
