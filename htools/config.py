@@ -4,7 +4,6 @@ import os
 CONFIG_DIR = os.path.expanduser(os.path.join('~', '.htools'))
 CREDS_FILE = os.path.join(CONFIG_DIR, 'credentials.csv')
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.csv')
-os.makedirs(CONFIG_DIR, exist_ok=True)
 
 
 def get_default_user():
@@ -16,6 +15,7 @@ def get_default_user():
     str or None: A string containing the default email address. If user
         declines to specify one, None is returned.
     """
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     try:
         with open(CONFIG_FILE, 'r') as f:
             email = f.read().strip()
@@ -48,6 +48,7 @@ def get_credentials(from_email):
         it as a string. Otherwise, return None.
     """
     # Load credentials.
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     try:
         with open(CREDS_FILE, 'r') as f:
             creds = dict([line.strip().split(',') for line in f])
