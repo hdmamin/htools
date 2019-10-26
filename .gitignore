@@ -4,3 +4,4 @@
 notebooks/
 htools.egg-info/
 data/
+dist/
