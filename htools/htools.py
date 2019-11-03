@@ -1,3 +1,4 @@
+from collections import namedtuple
 from email.mime.text import MIMEText
 from itertools import chain
 import os
@@ -31,6 +32,52 @@ class LambdaDict(dict):
     def __missing__(self, key):
         self[key] = self.f(key)
         return self[key]
+
+
+def arg_tuple(**kwargs):
+    """Wrapper to easily create a named tuple of arguments. Functions sometimes
+    return multiple values, and we have a few options to handle this: we can
+    return them as a regular tuple, but it is often convenient to be able to
+    reference items by name rather than position. If we want the output to be
+    mutable, we can return a dictionary, but this still requires more space
+    than a tuple and bracket notation is arguably less convenient than dot
+    notation. We can create a new namedtuple inside the function, but this
+    kind of seems like overkill to create a new type of namedtuple for each
+    function.
+
+    Instead, this lets us create a namedtuple of Args on the fly just as easily
+    as making a dictionary.
+
+    Parameters
+    ----------
+
+    Examples
+    --------
+    def math_summary(x, y):
+        sum_ = x + y
+        prod = x * y
+        diff = x - y
+        quotient = x / y
+        return arg_tuple(sum=sum_,
+                         product=prod,
+                         difference=diff,
+                         quotient=quotient)
+
+    >>> results = math_summary(4, 2)
+    >>> results.product
+
+    8
+
+    >>> results.quotient
+
+    2
+
+    >>> results
+
+    Args(sum=6, product=8, difference=2, quotient=2)
+    """
+    Args = namedtuple('Args', *kwargs.keys())
+    return Args(*kwargs.values())
 
 
 def hdir(obj, magics=False, internals=False):
