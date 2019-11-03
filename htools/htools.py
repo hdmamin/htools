@@ -76,7 +76,7 @@ def arg_tuple(**kwargs):
 
     Args(sum=6, product=8, difference=2, quotient=2)
     """
-    Args = namedtuple('Args', *kwargs.keys())
+    Args = namedtuple('Args', kwargs.keys())
     return Args(*kwargs.values())
 
 
