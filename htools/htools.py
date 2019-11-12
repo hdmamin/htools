@@ -34,7 +34,7 @@ class LambdaDict(dict):
         return self[key]
 
 
-def arg_tuple(**kwargs):
+def Args(**kwargs):
     """Wrapper to easily create a named tuple of arguments. Functions sometimes
     return multiple values, and we have a few options to handle this: we can
     return them as a regular tuple, but it is often convenient to be able to
@@ -58,10 +58,10 @@ def arg_tuple(**kwargs):
         prod = x * y
         diff = x - y
         quotient = x / y
-        return arg_tuple(sum=sum_,
-                         product=prod,
-                         difference=diff,
-                         quotient=quotient)
+        return Args(sum=sum_,
+                    product=prod,
+                    difference=diff,
+                    quotient=quotient)
 
     >>> results = math_summary(4, 2)
     >>> results.product
@@ -76,8 +76,8 @@ def arg_tuple(**kwargs):
 
     Args(sum=6, product=8, difference=2, quotient=2)
     """
-    Args = namedtuple('Args', kwargs.keys())
-    return Args(*kwargs.values())
+    args = namedtuple('Args', kwargs.keys())
+    return args(*kwargs.values())
 
 
 def hdir(obj, magics=False, internals=False):
