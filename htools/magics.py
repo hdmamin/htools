@@ -11,6 +11,12 @@ from htools import hdir
 class InteractiveMagic(Magics):
 
     @cell_magic
+    @magic_arguments()
+    @argument('-p', action='store_true',
+              help='Boolean flag. If passed, the change will apply for the '
+                   'rest of the notebook, or until the user changes it again. '
+                   'The default behavior is to apply the change only to the '
+                   'current cell.')
     def talk(self, line=None, cell=None):
         """When Jupyter notebook is in default mode where
         ast_node_interactivity=last (i.e. only the last unprinted statement is
@@ -41,11 +47,15 @@ class InteractiveMagic(Magics):
 
         7
         """
-        InteractiveShell.ast_node_interactivity = 'all'
-        get_ipython().run_cell(cell)
-        InteractiveShell.ast_node_interactivity = 'last'
+        self._adjust_verbosity(cell, 'all', parse_argstring(self.talk, line))
 
     @cell_magic
+    @magic_arguments()
+    @argument('-p', action='store_true',
+              help='Boolean flag. If passed, the change will apply for the '
+                   'rest of the notebook, or until the user changes it again. '
+                   'The default behavior is to apply the change only to the '
+                   'current cell.')
     def hush(self, line=None, cell=None):
         """The reverse of the `talk` magic. When the notebook is in
         ast_node_interactivty='all' mode, this can be used to suppress outputs
@@ -76,15 +86,20 @@ class InteractiveMagic(Magics):
         3
         7
         """
-        InteractiveShell.ast_node_interactivity = 'last'
-        get_ipython().run_cell(cell)
-        InteractiveShell.ast_node_interactivity = 'all'
+        self._adjust_verbosity(cell, 'last', parse_argstring(self.hush, line))
 
     @cell_magic
+    @magic_arguments()
+    @argument('-p', action='store_true',
+              help='Boolean flag. If passed, the change will apply for the '
+                   'rest of the notebook, or until the user changes it again. '
+                   'The default behavior is to apply the change only to the '
+                   'current cell.')
     def mute(self, line=None, cell=None):
         """A more extreme version of the `hush` magic that suppresses all
         output from a cell. Cells that follow will return to the default mode
-        of ast_node_interactivity='last'.
+        of ast_node_interactivity='last' unless the -p flag (for persist) is
+        provided.
 
         Examples
         ---------
@@ -107,9 +122,14 @@ class InteractiveMagic(Magics):
 
         7
         """
-        InteractiveShell.ast_node_interactivity = 'none'
+        self._adjust_verbosity(cell, 'none', parse_argstring(self.mute, line))
+
+    def _adjust_verbosity(self, cell, mode, args):
+        old_setting = InteractiveShell.ast_node_interactivity
+        InteractiveShell.ast_node_interactivity = mode
         get_ipython().run_cell(cell)
-        InteractiveShell.ast_node_interactivity = 'all'
+        if not args.p:
+            InteractiveShell.ast_node_interactivity = old_setting
 
 
 @magics_class
