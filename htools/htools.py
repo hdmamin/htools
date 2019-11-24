@@ -1,3 +1,4 @@
+import bz2
 from collections import namedtuple
 from email.mime.text import MIMEText
 from itertools import chain
@@ -32,6 +33,78 @@ class LambdaDict(dict):
     def __missing__(self, key):
         self[key] = self.f(key)
         return self[key]
+
+
+class AutoInit:
+    """Mixin class where child class has a long list init arguments that will
+    be assigned to the same name.
+
+    Examples
+    --------
+    Without AutoInit:
+
+    class Child:
+        def __init__(self, name, age, sex, hair, height, weight, grade, eyes):
+            self.name = name
+            self.age = age
+            self.sex = sex
+            self.hair = hair
+            self.height = height
+            self.weight = weight
+            self.grade = grade
+            self.eyes = eyes
+        def __repr__(self):
+            return f'Child(name={self.name}, age={self.age}, sex={self.sex}, '\
+                   f'hair={self.hair}, weight={self.weight}, '\
+                   f'grade={self.grade}, eyes={self.eyes})'
+
+    With AutoInit:
+
+    class Child(AutoInit):
+        def __init__(self, name, age, sex, hair, height, weight, grade, eyes):
+            super().__init__(locals())
+
+    Note that we could also use the following method, though this is less
+    informative when constructing instances of the child class and does not
+    have the built in __repr__ that comes with AutoInit:
+
+    class Child:
+        def __init__(self, **kwargs):
+            self.__dict__ = kwargs
+    """
+    def __init__(self, child_args):
+        self._auto_init(child_args)
+
+    def _auto_init(self, child_args):
+        """[summary]
+        
+        Parameters
+        ----------
+        child_args : [type]
+            [description]
+        """
+        child_args.pop('self', None)
+        self.__dict__ = child_args
+
+    def __repr__(self):
+        """Returns string representation of child class including variables
+        used in init method. For the example in the class docstring, this would
+        return:
+
+        child = Child('Henry', 8, 'm', 'brown', 52, 70, 3, 'green')
+        Child(name='Henry', age=8, sex='m', hair='brown', height=52, 
+              weight=70, grade=3, eyes='green')
+        
+        Returns
+        -------
+        [type]
+            [description]
+        """
+        args = ', '.join(
+            f'{k}={v}' for k, v in self.__dict__.items()
+            if k in self.__init__.__code__.co_varnames
+        )
+        return f'{self.__class__.__name__}({args})'
 
 
 def Args(**kwargs):
@@ -354,42 +427,63 @@ def eprint(arr, indent=2, spacing=1):
         print(f'{i:>{indent}}: {x}', end='\n'*spacing)
 
 
-def save_pickle(obj, fname, dir_name, verbose=True):
+def save(obj, path, compress=True, verbose=True):
     """Wrapper to quickly save a pickled object.
 
     Parameters
     -----------
     obj: any
         Object to pickle.
-    fname: str
-        Name of file to save to (ex: vocab.pkl).
-    dir_name: str
-        Directory containing file. This should include any relevant
-        subdirectories.
+    path: str
+        File name to save pickled object to.
+    compress: bool
+        If True, will compress the pickled object using the bz library (in 
+        this case, path should end with a .zip extension). If False, object
+        will not be compressed and path should end with a .pkl extension.
     verbose: bool
         If True, print a message confirming that the data was pickled, along
         with its path.
+
+    Returns
+    -------
+    None
     """
-    os.makedirs(dir_name, exist_ok=True)
-    path = os.path.join(dir_name, fname)
-    with open(path, 'wb') as f:
-        pickle.dump(obj, f)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if compress:
+        with bz2.BZ2File(path, 'w') as f:
+            pickle.dump(obj, f)
+    else:
+        with open(path, 'wb') as f:
+            pickle.dump(obj, f)
     if verbose:
         print(f'Data written to {path}.')
 
 
-def load_pickle(fname, dir_name):
-    """Wrapper to quickly load a pickled object.
-
+def load(path, decompress=True, verbose=True):
+    """Wrapper to load a pickled object.
+    
     Parameters
-    -----------
-    fname: str
-        Name of file to load (ex: vocab.pkl).
-    dir_name: str
-        Directory containing file (ex: ../data/raw).
+    ----------
+    path : str
+        File to load.
+    decompress : bool, optional
+        Pass in True if object is zipped, False otherwise.
+    verbose : bool, optional
+        If True, will print message stating where object was loaded from.
+    
+    Returns
+    -------
+    object: The Python object that was pickled to the specified file.
     """
-    with open(os.path.join(dir_name, fname), 'rb') as f:
-        data = pickle.load(f)
+    if decompress:
+        with bz2.BZ2File(path, 'r') as f:
+            data = pickle.load(f)
+    else:
+        with open(path, 'rb') as f:
+            data = pickle.load(f)
+
+    if verbose:
+        print(f'Object loaded from {path}.')
     return data
 
 
@@ -470,13 +564,14 @@ def differences(obj1, obj2, methods=False, **kwargs):
         first is the corresponding value for obj1 and the second is the
         corresponding value for obj2.
     """
-    attr1, attr2 = hdir(obj1, **kwargs), hdir(obj2, **kwargs)
+    if obj1 == obj2:
+        return {}
+
     assert type(obj1) == type(obj2), 'Objects must be the same type.'
+    attr1, attr2 = hdir(obj1, **kwargs), hdir(obj2, **kwargs)
     assert attr1.keys() == attr2.keys(), 'Objects must have same attributes.'
 
     diffs = {}
-    if obj1 == obj2:
-        return diffs
     for (k1, v1), (k2, v2) in zip(attr1.items(), attr2.items()):
         # Only compare non-callable attributes.
         if not (methods or v1 == 'attribute'):
