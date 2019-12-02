@@ -37,7 +37,10 @@ class LambdaDict(dict):
 
 class AutoInit:
     """Mixin class where child class has a long list init arguments that will
-    be assigned to the same name.
+    be assigned to the same name. Note that *args are not supported in the
+    init method because each attribute that is defined in the resulting object
+    must have a name. A variable length list of args can still be passed in as
+    a single argument, of course, without the use of star unpacking.
 
     Examples
     --------
@@ -83,8 +86,8 @@ class AutoInit:
         child_args : dict
             Arguments passed to child class.
         """
-        child_args.pop('self', None)
-        self.__dict__ = child_args
+        self.__dict__ = {k: v for k, v in child_args.items()
+                         if k != 'self' and not k.startswith('__')}
 
     def _init_kwargs(self):
         """Yield key-value pairs for arguments used to initialize child class.
@@ -118,7 +121,7 @@ class AutoInit:
         [type]
             [description]
         """
-        args = ', '.join(f'{k}={v}' for k, v in self._init_kwargs())
+        args = ', '.join(f'{k}={repr(v)}' for k, v in self._init_kwargs())
         return f'{self.__class__.__name__}({args})'
 
 
