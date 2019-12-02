@@ -86,26 +86,10 @@ class AutoInit:
         child_args : dict
             Arguments passed to child class.
         """
+        child_args.update(child_args.pop('kwargs', {}))
         self.__dict__ = {k: v for k, v in child_args.items()
                          if k != 'self' and not k.startswith('__')}
-
-    def _init_kwargs(self):
-        """Yield key-value pairs for arguments used to initialize child class.
-        Helper function is useful for dealing with kwargs, otherwise __repr__
-        will group all kwargs together as one variable.
-        
-        Yields
-        -------
-        tuple: Argument name, argument value.
-        """
-        arg_names = set(self.__init__.__code__.co_varnames)
-        for k, v in self.__dict__.items():
-            if k not in arg_names:
-                continue
-            if k == 'kwargs':
-                yield from v.items()
-            else:
-                yield k, v
+        self._init_keys = set(self.__dict__.keys())
 
     def __repr__(self):
         """Returns string representation of child class including variables
@@ -121,7 +105,8 @@ class AutoInit:
         [type]
             [description]
         """
-        args = ', '.join(f'{k}={repr(v)}' for k, v in self._init_kwargs())
+        args = ', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items()
+                         if k in self._init_keys)
         return f'{self.__class__.__name__}({args})'
 
 
