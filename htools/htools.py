@@ -1,10 +1,13 @@
 import bz2
 from collections import namedtuple
+from contextlib import contextmanager
 from email.mime.text import MIMEText
+from functools import wraps
 from itertools import chain
 import os
 import pickle
 import re
+import signal
 import smtplib
 import sys
 import time
@@ -624,3 +627,42 @@ def catch(func, *args, verbose=False):
         if verbose:
             print(e)
         return
+
+
+def timebox_handler(time, frame):
+    raise Exception('Time limit exceeded.')
+
+
+@contextmanager
+def time_box(time):
+    """Try to execute code for specified amount of time before throwing error.
+
+    Parameters
+    ----------
+    time: int
+        Max number of seconds before throwing error.
+
+    Examples
+    --------
+    with time_box(5) as t:
+        x = computationally_expensive_code()
+    """
+    try:
+        signal.signal(signal.SIGALRM, timebox_handler)
+        signal.alarm(time)
+        yield
+    finally:
+        signal.alarm(0)
+
+
+def time_boxed(time):
+    """Decorator version of time box. Try to execute decorated function for
+    `time` seconds before throwing exception.
+    """
+    def intermediate_wrapper(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with time_box(time) as t:
+                return func(*args, **kwargs)
+        return wrapper
+    return intermediate_wrapper
