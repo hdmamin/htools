@@ -15,29 +15,6 @@ import time
 from htools.config import get_credentials, get_default_user
 
 
-class LambdaDict(dict):
-    """Create a default dict where the default function can accept parameters.
-    Whereas the defaultdict in Collections can set the default as int or list,
-    here we can pass in any function where the key is the parameter.
-    """
-
-    def __init__(self, default_function):
-        """
-        Parameters
-        ----------
-        default_function: function
-            When referencing a key in a LambdaDict object that has not been
-            added yet, the value will be the output of this function called
-            with the key passed in as an argument.
-        """
-        super().__init__()
-        self.f = default_function
-
-    def __missing__(self, key):
-        self[key] = self.f(key)
-        return self[key]
-
-
 class AutoInit:
     """Mixin class where child class has a long list init arguments that will
     be assigned to the same name. Note that *args are not supported in the
@@ -157,6 +134,142 @@ def Args(**kwargs):
     """
     args = namedtuple('Args', kwargs.keys())
     return args(*kwargs.values())
+
+
+class TimeExceededError(Exception):
+    pass
+
+
+def timebox_handler(time, frame):
+    raise TimeExceededError('Time limit exceeded.')
+
+
+@contextmanager
+def timebox(time):
+    """Try to execute code for specified amount of time before throwing error.
+    If you don't want to throw an error, use with a try/except block.
+
+    Parameters
+    ----------
+    time: int
+        Max number of seconds before throwing error.
+
+    Examples
+    --------
+    with time_box(5) as t:
+        x = computationally_expensive_code()
+
+    More permissive version:
+    x = step_1()
+    with timebox(5) as t:
+        try:
+            x = slow_step_2()
+        except TimeExceededError:
+            pass
+    """
+    try:
+        signal.signal(signal.SIGALRM, timebox_handler)
+        signal.alarm(time)
+        yield
+    finally:
+        signal.alarm(0)
+
+
+def timeboxed(time):
+    """Decorator version of timebox. Try to execute decorated function for
+    `time` seconds before throwing exception.
+    """
+    def intermediate_wrapper(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with timebox(time) as t:
+                return func(*args, **kwargs)
+        return wrapper
+    return intermediate_wrapper
+
+
+class expensive:
+    """Decorator for computationally expensive methods that should only be
+    computed once (i.e. they take zero arguments aside from self and are slow
+    to execute). Lowercase name is used for consistency with more decorators.
+    Heavily influenced by example in `Python Cookbook` by David Beazley and
+    Brian K. Jones. Note that, as with the @property decorator, no parentheses
+    are used when calling the decorated method.
+
+    Examples
+    --------
+    class Vocab:
+
+        def __init__(self, tokens):
+            self.tokens = tokens
+
+        @expensive
+        def embedding_matrix(self):
+            print('Building matrix...')
+            # Slow computation to build and return a matrix of word embeddings.
+            return matrix
+
+    # First call is slow.
+    >>> v = Vocab(tokens)
+    >>> v.embedding_matrix
+
+    Building matrix...
+    [[.03, .5, .22, .01],
+     [.4, .13, .06, .55]
+     [.77, .14, .05, .9]]
+
+    # Second call accesses attribute without re-computing 
+    # (notice no "Building matrix" message).
+    >>> v = Vocab(tokens)
+    >>> v.embedding_matrix
+
+    [[.03, .5, .22, .01],
+     [.4, .13, .06, .55]
+     [.77, .14, .05, .9]]
+    """
+
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, instance, cls):
+        """This method is called when the variable being accessed is not in the
+        instance's state dict. The next time the attribute is accessed, the 
+        computed value will be in the state dict so this method (and the method
+        in the instance itself) is not called again unless the attribute is 
+        deleted.
+        """
+        # When attribute accessed as class method, instance is None.
+        if instance is None:
+            return self
+
+        # When accessed as instance method, call method on instance as usual.
+        # Then set instance attribute and return value.
+        val = self.func(instance)
+        setattr(instance, self.func.__name__, val)
+        return val
+
+
+class LambdaDict(dict):
+    """Create a default dict where the default function can accept parameters.
+    Whereas the defaultdict in Collections can set the default as int or list,
+    here we can pass in any function where the key is the parameter.
+    """
+
+    def __init__(self, default_function):
+        """
+        Parameters
+        ----------
+        default_function: function
+            When referencing a key in a LambdaDict object that has not been
+            added yet, the value will be the output of this function called
+            with the key passed in as an argument.
+        """
+        super().__init__()
+        self.f = default_function
+
+    def __missing__(self, key):
+        self[key] = self.f(key)
+        return self[key]
 
 
 def hdir(obj, magics=False, internals=False):
@@ -627,42 +740,3 @@ def catch(func, *args, verbose=False):
         if verbose:
             print(e)
         return
-
-
-def timebox_handler(time, frame):
-    raise Exception('Time limit exceeded.')
-
-
-@contextmanager
-def time_box(time):
-    """Try to execute code for specified amount of time before throwing error.
-
-    Parameters
-    ----------
-    time: int
-        Max number of seconds before throwing error.
-
-    Examples
-    --------
-    with time_box(5) as t:
-        x = computationally_expensive_code()
-    """
-    try:
-        signal.signal(signal.SIGALRM, timebox_handler)
-        signal.alarm(time)
-        yield
-    finally:
-        signal.alarm(0)
-
-
-def time_boxed(time):
-    """Decorator version of time box. Try to execute decorated function for
-    `time` seconds before throwing exception.
-    """
-    def intermediate_wrapper(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            with time_box(time) as t:
-                return func(*args, **kwargs)
-        return wrapper
-    return intermediate_wrapper
