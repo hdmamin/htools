@@ -156,12 +156,12 @@ def timebox(time):
 
     Examples
     --------
-    with time_box(5) as t:
+    with time_box(5) as tb:
         x = computationally_expensive_code()
 
     More permissive version:
     x = step_1()
-    with timebox(5) as t:
+    with timebox(5) as tb:
         try:
             x = slow_step_2()
         except TimeExceededError:
@@ -182,7 +182,7 @@ def timeboxed(time):
     def intermediate_wrapper(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            with timebox(time) as t:
+            with timebox(time) as tb:
                 return func(*args, **kwargs)
         return wrapper
     return intermediate_wrapper
@@ -314,41 +314,26 @@ def hdir(obj, magics=False, internals=False):
     return output
 
 
-def tdir(obj, methods=False, **kwargs):
+def tdir(obj, **kwargs):
     """A variation of the built in `dir` function that shows the
-    attribute/method names as well as their types.
+    attribute names as well as their types. Methods are excluded as they can
+    change the object's state.
 
     Parameters
     ----------
     obj: any type
         The object to examine.
-    methods: bool
-        If True, include both methods and attributes in output. If False
-        (default behavior), only return attributes. Methods are more finicky
-        as they may require arguments, but attributes can generally be
-        retrieved without issue.
     kwargs: bool
         Additional arguments to be passed to hdir. Options are `magics` and
         `internals`. See hdir documentation for more information.
 
     Returns
     -------
-    dict[str, type]: Dictionary mapping the name of the object's
-    methods/attributes to the corresponding types of those attributes.
+    dict[str, type]: Dictionary mapping the name of the object's attributes to
+    the corresponding types of those attributes.
     """
-    out = dict()
-    for k, v in hdir(obj, **kwargs).items():
-        if v == 'attribute':
-            out[k] = type(getattr(obj, k))
-
-        # Only methods that don't require additional arguments are added.
-        elif methods and v == 'method':
-            try:
-                out[k] = type(getattr(obj, k)())
-            except TypeError:
-                continue
-
-    return out
+    return {k: type(getattr(obj, k)) 
+            for k, v in hdir(obj, **kwargs).items() if v == 'attribute'}
 
 
 def hmail(subject, message, to_email, from_email=None):
