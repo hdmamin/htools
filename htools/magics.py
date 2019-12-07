@@ -127,7 +127,7 @@ class InteractiveMagic(Magics):
     def _adjust_verbosity(self, cell, mode, args):
         old_setting = InteractiveShell.ast_node_interactivity
         InteractiveShell.ast_node_interactivity = mode
-        get_ipython().run_cell(cell)
+        self.shell.run_cell(cell)
         if not args.p:
             InteractiveShell.ast_node_interactivity = old_setting
 
@@ -171,7 +171,7 @@ class WarningMagic(Magics):
         references the method that was called.
         """
         warnings.filterwarnings(mode)
-        get_ipython().run_cell(cell)
+        self.shell.run_cell(cell)
 
         # Reset manually because warnings.resetwarnings() behaved erratically.
         if not persist:
@@ -223,15 +223,30 @@ class FunctionRacerMagic(Magics):
                 if not row.startswith('#')]
         prefix = f'%timeit -n {n} -r {r} '
         for row in rows:
-            get_ipython().run_cell(prefix + row)
+            self.shell.run_cell(prefix + row)
 
 
 @magics_class
 class TimeboxMagic(Magics):
+    """Timebox a cell's execution to a user-specified duration. As with any
+    standard try/except block, note that values can change during execution
+    even if an error is eventually thrown (i.e. no rollback occurs).
+    
+    Sample usage:
+    
+    %%timebox 3
+    # Throw error if cell takes longer than 3 seconds to execute.
+    output = slow_function(*args)
+
+    %%timebox 3 -p
+    # Attempt to execute cell for 3 seconds, then give up. Message is printed
+    # stating that time is exceeded but no error is thrown.
+    output = slow_function(*args)
+    """
 
     @cell_magic
     @magic_arguments()
-    @argument('-t', type=int,
+    @argument('time', type=int,
               help='Max number of seconds before throwing error.')
     @argument('-p', action='store_true',
               help='Boolean flag: if provided, use permissive '
@@ -243,17 +258,18 @@ class TimeboxMagic(Magics):
                    'execution.')
     def timebox(self, line=None, cell=None):
         args = parse_argstring(self.timebox, line)
-        with timebox(args.t) as tb:
+        with timebox(args.time) as tb:
             if args.p:
                 cell = self._make_cell_permissive(cell)
-            get_ipython().run_cell(cell)
+            self.shell.run_cell(cell)
 
     @staticmethod
     def _make_cell_permissive(cell):
+        """Place whole cell in try/except block."""
         robust_cell = (
             'try:\n\t' + cell.replace('\n', '\n\t')
             + '\nexcept:\n\tprint("Time exceeded. '
-            '\\nWarning: mutable objects may have changed during execution.")'
+            '\\nWarning: objects may have changed during execution.")'
         )
         return robust_cell
 
