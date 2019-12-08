@@ -188,7 +188,7 @@ def timeboxed(time):
     return intermediate_wrapper
 
 
-class expensive:
+class cached_property:
     """Decorator for computationally expensive methods that should only be
     computed once (i.e. they take zero arguments aside from self and are slow
     to execute). Lowercase name is used for consistency with more decorators.
@@ -203,7 +203,7 @@ class expensive:
         def __init__(self, tokens):
             self.tokens = tokens
 
-        @expensive
+        @cached_property
         def embedding_matrix(self):
             print('Building matrix...')
             # Slow computation to build and return a matrix of word embeddings.
