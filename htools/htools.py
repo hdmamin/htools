@@ -400,6 +400,7 @@ def htimer(func):
     [TIMER]: function <count_to> executed in roughly 5.0365 seconds
     (conservatively).
     """
+    @wraps(func)
     def wrapper(*args, **kwargs):
         start = time.time()
         output = func(*args, **kwargs)
@@ -725,3 +726,27 @@ def catch(func, *args, verbose=False):
         if verbose:
             print(e)
         return
+
+
+def flatten(nested):
+    """Flatten a nested sequence where the sub-items can be sequences or 
+    primitives. This differs slightly from itertools chain methods because
+    those require all sub-items to be sequences. This also returns a list 
+    rather than a generator.
+
+    Parameters
+    ----------
+    nested: sequence (list, tuple, set)
+        Sequence where some or all of the items are also sequences.
+
+    Returns
+    -------
+    list: Flattened version of `nested`.
+    """
+    def _walk(nested):
+        for group in nested:
+            try:
+                yield from group
+            except TypeError:
+                yield group
+    return list(_walk(nested))
