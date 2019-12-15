@@ -2,7 +2,8 @@ import bz2
 from collections import namedtuple
 from contextlib import contextmanager
 from email.mime.text import MIMEText
-from functools import wraps
+from functools import wraps, partial
+import inspect
 from itertools import chain
 import os
 import pickle
@@ -178,6 +179,17 @@ def timebox(time):
 def timeboxed(time):
     """Decorator version of timebox. Try to execute decorated function for
     `time` seconds before throwing exception.
+
+    Parameters
+    ----------
+    time: int
+        Max number of seconds before throwing error.
+
+    Examples
+    --------
+    @timeboxed(5)
+    def func(x, y):
+        # If function does not complete within 5 seconds, will throw error.
     """
     def intermediate_wrapper(func):
         @wraps(func)
@@ -247,6 +259,87 @@ class cached_property:
         val = self.func(instance)
         setattr(instance, self.func.__name__, val)
         return val
+
+
+def typecheck(func_=None, **types):
+    """Decorator to enforce type checking for a function or method. There are 
+    two ways to call this: either explicitly passing argument types to the
+    decorator, or letting it infer them using type annotations in the function
+    that will be decorated. We allow multiple both usage methods since older
+    versions of Python lack type annotations, and also because I feel the 
+    annotation syntax can hurt readability.
+    
+
+    Parameters
+    ----------
+    func_: function
+        The function to decorate. When using decorator with 
+        manually-specified types, this is None. Underscore is used so that
+        `func` can still be used as a valid keyword argument for the wrapped 
+        function.
+    types: type
+        Optional way to specify variable types.
+        
+    Examples
+    --------
+    In the first example, we specify types directly in the decorator. Notice
+    that they can be single types or tuples of types. You can choose to 
+    specify types for all arguments or just a subset.
+    
+    @typecheck(x=float, y=(int, float), iters=int, verbose=bool)
+    def process(x, y, z, iters=5, verbose=True):
+        print(f'z = {z}')
+        for i in range(iters):
+            if verbose: print(f'Iteration {i}...')
+            x *= y
+        return x
+    
+    >>> process(3.1, 4.5, 0, 2.0)
+    TypeError: iters must be <class 'int'>, not <class 'float'>.
+    
+    >>> process(3.1, 4, 'a', 1, False)
+    z = a
+    12.4
+    
+    Alternatively, you can let the decorator infer types using annotations
+    in the function that is to be decorated. The example below behaves 
+    equivalently to the explicit example shown above. Note that annotations
+    regarding the returned value are ignored.
+    
+    @typecheck
+    def process(x:float, y:(int, float), z, iters:int=5, verbose:bool=True):
+        print(f'z = {z}')
+        for i in range(iters):
+            if verbose: print(f'Iteration {i}...')
+            x *= y
+        return x
+        
+    >>> process(3.1, 4.5, 0, 2.0)
+    TypeError: iters must be <class 'int'>, not <class 'float'>.
+    
+    >>> process(3.1, 4, 'a', 1, False)
+    z = a
+    12.4
+    """
+    # Case 1: Pass keyword args to decorator specifying types.
+    if not func_:
+        return partial(typecheck, **types)
+    # Case 2: Infer types from annotations. Skip if Case 1 already occurred.
+    elif not types:
+        types = {k: v.annotation 
+                 for k, v in inspect.signature(func_).parameters.items()
+                 if not v.annotation == inspect._empty}
+    
+    @wraps(func_)
+    def wrapped(*args, **kwargs):
+        fargs = inspect.signature(wrapped).bind(*args, **kwargs).arguments
+        for k, v in types.items():
+            if k in fargs and not isinstance(fargs[k], v):
+                raise TypeError(
+                    f'{k} must be {str(v)}, not {type(fargs[k])}.'
+                )
+        return func_(*args, **kwargs)
+    return wrapped
 
 
 class LambdaDict(dict):
