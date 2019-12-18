@@ -68,8 +68,10 @@ class AutoInit:
             Arguments passed to child class.
         """
         child_args.update(child_args.pop('kwargs', {}))
-        self.__dict__ = {k: v for k, v in child_args.items()
-                         if k != 'self' and not k.startswith('__')}
+        for k, v in child_args.items():
+            if k == 'self' or k.startswith('__'):
+                continue
+            setattr(self, k, v)
         self._init_keys = set(self.__dict__.keys())
 
     def __repr__(self):
@@ -278,7 +280,10 @@ def typecheck(func_=None, **types):
         `func` can still be used as a valid keyword argument for the wrapped 
         function.
     types: type
-        Optional way to specify variable types.
+        Optional way to specify variable types. Use standard types rather than
+        importing from the typing library, as subscripted generics are not 
+        supported (e.g. typing.List[str] will not work; typing.List will but at
+        that point there is no benefit over the standard `list`). 
         
     Examples
     --------
@@ -340,6 +345,43 @@ def typecheck(func_=None, **types):
                 )
         return func_(*args, **kwargs)
     return wrapped
+
+
+def debug_call(func):
+    """Decorator to help debug function calls. In general, this is not meant to
+    permanently decorate a function, but rather to be used temporarily when
+    debugging a function call.
+
+    Parameters
+    ----------
+    func: function
+        Function being decorated.
+    
+    Examples
+    --------
+    Occasionally, you might pass arguments to different parameters than you 
+    intended. Throwing a debug_call decorator on the function helps you check
+    that the arguments are matching up as expected. For example, the parameter
+    names in the function below have an unexpected order, so you could easily
+    make the following call and expect to get 8. The debug decorator helps
+    catch that the third argument is being passed in as the x parameter.
+
+    @debug_call
+    def f(a, b, x=0, y=None, z=4, c=1):
+        return a + b + c
+
+    >>> f(3, 4, 1)
+    f(a=1, b=2, x=3)
+    4
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        sig = inspect.signature(wrapper)\
+                .bind_partial(*args, **kwargs).arguments
+        arg_string = ", ".join(f"{k}={v}" for k, v in sig.items())
+        print(f'{wrapper.__name__}({arg_string})')
+        return func(*args, **kwargs)
+    return wrapper
 
 
 class LambdaDict(dict):
