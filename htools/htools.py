@@ -12,6 +12,7 @@ import signal
 import smtplib
 import sys
 import time
+import warnings
 
 from htools.config import get_credentials, get_default_user
 
@@ -67,12 +68,15 @@ class AutoInit:
         child_args : dict
             Arguments passed to child class.
         """
+        # Get param names from child args rather than instance dict since some
+        # attributes may not be stored in __dict__ (e.g. using @property).
+        self._init_keys = set()
         child_args.update(child_args.pop('kwargs', {}))
         for k, v in child_args.items():
             if k == 'self' or k.startswith('__'):
                 continue
             setattr(self, k, v)
-        self._init_keys = set(self.__dict__.keys())
+            self._init_keys.add(k)
 
     def __repr__(self):
         """Returns string representation of child class including variables
@@ -88,9 +92,8 @@ class AutoInit:
         [type]
             [description]
         """
-        args = ', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items()
-                         if k in self._init_keys)
-        return f'{self.__class__.__name__}({args})'
+        arg_strs = (f'{k}={repr(getattr(self, k))}' for k in self._init_keys)
+        return f'{self.__class__.__name__}({", ".join(arg_strs)})'
 
 
 def Args(**kwargs):
@@ -263,6 +266,84 @@ class cached_property:
         return val
 
 
+class ReadOnly:
+    """Descriptor to make an attribute read-only. This means that once a value
+    has been set, the user cannot change it. Note that read-only attributes
+    must first be created as class variables (see example below).
+
+    Value is initially set to object() as a placeholder. This allows us to 
+    determine whether a value has been specified yet (if, for example, we used
+    None as a placeholder, we would encounter issues if the user chose to 
+    explicitly set a value of None).
+
+    Examples
+    --------
+    class Dog:
+        breed = ReadOnly()
+        def __init__(self, breed, age):
+            # Once breed is set in the line below, it cannot be changed.
+            self.breed = breed
+            self.age = age
+
+    >>> d = Dog('dalmatian', 'Arnold')
+    >>> d.breed
+
+    'dalmatian'
+
+    >>> d.breed = 'labrador'
+
+    ValueError: Attribute is read-only.
+    """
+
+    def __init__(self):
+        self.value = _placeholder
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return self
+        elif self.value is _placeholder:
+            warnings.warn('Value of read-only attribute has not yet been set.')
+        else:
+            return self.value
+
+    def __set__(self, instance, value):
+        if self.value is _placeholder:
+            self.value = value
+        else:
+            raise ValueError('Attribute is read-only.')
+
+# class ReadOnly:
+#     """Descriptor to make an attribute read-only. This means that once a value
+#     has been set, the user cannot change it (TODO: update explanation depending
+#     on implementation choice; this way can edit via __dict__).
+
+#     TODO: commented version above works but excludes readonly attrs from
+#     autoinit repr. Maybe try timing the two versions to see how they compare.
+#     This version also allows changes via the instance dict while the first way
+#     does not.
+#     """
+
+
+#     def __init__(self, name):
+#         self.has_value = False
+#         self.name = name
+
+#     def __get__(self, instance, cls):
+#         if instance is None:
+#             return self
+#         elif not self.has_value:
+#             warnings.warn('Value of read-only attribute has not yet been set.')
+#         else:
+#             return instance.__dict__[self.name]
+
+#     def __set__(self, instance, value):
+#         if not self.has_value:
+#             instance.__dict__[self.name] = value
+#             self.has_value = True
+#         else:
+#             raise ValueError(f'Attribute {self.name} is read-only.')
+
+
 def typecheck(func_=None, **types):
     """Decorator to enforce type checking for a function or method. There are 
     two ways to call this: either explicitly passing argument types to the
@@ -336,21 +417,26 @@ def typecheck(func_=None, **types):
                  if not v.annotation == inspect._empty}
     
     @wraps(func_)
-    def wrapped(*args, **kwargs):
-        fargs = inspect.signature(wrapped).bind(*args, **kwargs).arguments
+    def wrapper(*args, **kwargs):
+        fargs = inspect.signature(wrapper).bind(*args, **kwargs).arguments
         for k, v in types.items():
             if k in fargs and not isinstance(fargs[k], v):
                 raise TypeError(
                     f'{k} must be {str(v)}, not {type(fargs[k])}.'
                 )
         return func_(*args, **kwargs)
-    return wrapped
+    return wrapper
 
 
 def debug_call(func):
     """Decorator to help debug function calls. In general, this is not meant to
     permanently decorate a function, but rather to be used temporarily when
-    debugging a function call.
+    debugging a function call. Note that a wrapped function that accepts *args
+    will display a signature including an 'args' parameter even though it isn't
+    a named parameter, because the goal here is to explicitly show which values
+    are being passed to which parameters. This does mean that the printed 
+    string won't be executable code in this case, but that shouldn't be
+    necessary anyway since it would contain the same call that was just used.
 
     Parameters
     ----------
@@ -376,10 +462,11 @@ def debug_call(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        sig = inspect.signature(wrapper)\
-                .bind_partial(*args, **kwargs).arguments
-        arg_string = ", ".join(f"{k}={v}" for k, v in sig.items())
-        print(f'{wrapper.__name__}({arg_string})')
+        sig = inspect.signature(wrapper).bind_partial(*args, **kwargs)
+        sig.apply_defaults()
+        sig.arguments.update(sig.arguments.pop('kwargs', {}))
+        arg_strs = (f'{k}={repr(v)}' for k, v in sig.arguments.items())
+        print(f'{wrapper.__name__}({", ".join(arg_strs)})')
         return func(*args, **kwargs)
     return wrapper
 
@@ -885,3 +972,6 @@ def flatten(nested):
             except TypeError:
                 yield group
     return list(_walk(nested))
+
+
+_placeholder = object()
