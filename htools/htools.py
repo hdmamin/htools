@@ -150,8 +150,43 @@ def timebox_handler(time, frame):
     raise TimeExceededError('Time limit exceeded.')
 
 
+# @contextmanager
+# def timebox(time):
+#     """Try to execute code for specified amount of time before throwing error.
+#     If you don't want to throw an error, use with a try/except block.
+
+#     Parameters
+#     ----------
+#     time: int
+#         Max number of seconds before throwing error.
+
+#     Examples
+#     --------
+#     with time_box(5) as tb:
+#         x = computationally_expensive_code()
+
+#     More permissive version:
+#     x = step_1()
+#     with timebox(5) as tb:
+#         try:
+#             x = slow_step_2()
+#         except TimeExceededError:
+#             pass
+#     """
+#     try:
+#         signal.signal(signal.SIGALRM, timebox_handler)
+#         signal.alarm(time)
+#         yield
+#     finally:
+#         signal.alarm(0)
+
+def permissive_timebox_handler(time, frame):
+    warnings.warn('Time limit exceeded.')
+    raise TimeoutError('timeout error')
+
+# TESTING
 @contextmanager
-def timebox(time):
+def timebox(time, strict=True):
     """Try to execute code for specified amount of time before throwing error.
     If you don't want to throw an error, use with a try/except block.
 
@@ -173,10 +208,14 @@ def timebox(time):
         except TimeExceededError:
             pass
     """
+    # handler = timebox_handler if strict else permissive_timebox_handler
     try:
         signal.signal(signal.SIGALRM, timebox_handler)
         signal.alarm(time)
         yield
+    except TimeExceededError as e:
+        if strict: raise
+        warnings.warn('Time limit exceeded.')
     finally:
         signal.alarm(0)
 
@@ -312,36 +351,29 @@ class ReadOnly:
         else:
             raise ValueError('Attribute is read-only.')
 
-# class ReadOnly:
-#     """Descriptor to make an attribute read-only. This means that once a value
-#     has been set, the user cannot change it (TODO: update explanation depending
-#     on implementation choice; this way can edit via __dict__).
 
-#     TODO: commented version above works but excludes readonly attrs from
-#     autoinit repr. Maybe try timing the two versions to see how they compare.
-#     This version also allows changes via the instance dict while the first way
-#     does not.
-#     """
-
-
-#     def __init__(self, name):
-#         self.has_value = False
-#         self.name = name
-
-#     def __get__(self, instance, cls):
-#         if instance is None:
-#             return self
-#         elif not self.has_value:
-#             warnings.warn('Value of read-only attribute has not yet been set.')
-#         else:
-#             return instance.__dict__[self.name]
-
-#     def __set__(self, instance, value):
-#         if not self.has_value:
-#             instance.__dict__[self.name] = value
-#             self.has_value = True
-#         else:
-#             raise ValueError(f'Attribute {self.name} is read-only.')
+def callbacks(on_begin=None, on_end=None):
+    """IN PROGRESS.
+    
+    TODO: 
+    -Figure out what to do with callback outputs (print, return, ?).
+    -Figure out how to handle diff args/kwargs - should all callback functions
+    just accept args/kwargs? 
+        -maybe should create bound arguments w/ inspect.signature before
+        passing to callback, that should let cb access vars by name I think
+    """
+    on_begin = on_begin or []
+    on_end = on_end or []
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for cb in on_begin:
+                cb(*args, **kwargs)
+            out = func(*args, **kwargs)
+            for cb in on_end:
+                cb(*args, **kwargs)
+            return out
+        return wrapper
+    return decorator
 
 
 def typecheck(func_=None, **types):
