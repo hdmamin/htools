@@ -58,10 +58,8 @@ class AutoInit:
         def __init__(self, **kwargs):
             self.__dict__ = kwargs
     """
+    
     def __init__(self, child_args):
-        self._auto_init(child_args)
-
-    def _auto_init(self, child_args):
         """Initialize variables.
         
         Parameters
@@ -69,10 +67,10 @@ class AutoInit:
         child_args : dict
             Arguments passed to child class.
         """
+        child_args.update(child_args.pop('kwargs', {}))
         # Get param names from child args rather than instance dict since some
         # attributes may not be stored in __dict__ (e.g. using @property).
         self._init_keys = set()
-        child_args.update(child_args.pop('kwargs', {}))
         for k, v in child_args.items():
             if k == 'self' or k.startswith('__'):
                 continue
@@ -90,8 +88,7 @@ class AutoInit:
         
         Returns
         -------
-        [type]
-            [description]
+        str
         """
         arg_strs = (f'{k}={repr(getattr(self, k))}' for k in self._init_keys)
         return f'{self.__class__.__name__}({", ".join(arg_strs)})'
@@ -349,18 +346,25 @@ class Callback(ABC):
         pass
 
 
-def callbacks(on_begin=None, on_end=None):
-    """IN PROGRESS. Trying to figure out what inputs/outputs to callbacks
-    should be.
+def callbacks(*, on_begin=None, on_end=None):
+    """Decorator that attaches callbacks to a function. Callbacks should be
+    defined as classes inheriting from abstract base class Callback that 
+    implement a __call__ method. This allows us to store states
+    rather than just printing outputs or relying on global vars.
 
-    In this experimental version, dict of inputs are passed to on_begin.
-    On_end takes both dict of inputs and decorated function's output.
+    Parameters
+    ----------
+    on_begin: list
+        Callbacks to be executed before the decorated function.
+    on_end: list
+        Callbacks to be executed after the decorated function.
 
-    UPDATE: callbacks should be classes inheriting from abstract base class
-    Callback that implement __call__ method. This allows us to store states
-    rather than just printing or relying on global vars. Think about whether
-    output should have default None, SENTINEL, or no default (and whether this
-    should differ for on_begin vs. on_end callbacks).
+    Examples
+    --------
+    @callbacks(on_begin=[print_hyperparameters],
+               on_end=[plot_activation_hist, activation_means, print_output])
+    def train(**kwargs):
+        # Train model and return loss.
     """
     on_begin = on_begin or []
     on_end = on_end or []
@@ -608,7 +612,7 @@ def hmail(subject, message, to_email, from_email=None):
 
     Returns
     --------
-    None.
+    None
     """
     # Load source email address.
     from_email = from_email or get_default_user()
@@ -653,8 +657,7 @@ def htimer(func):
             time.sleep(0.5)
 
     >>> count_to(10)
-    [TIMER]: function <count_to> executed in roughly 5.0365 seconds
-    (conservatively).
+    [TIMER]: count_to executed in approximately 5.0365 seconds.
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
