@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import bz2
 from collections import namedtuple
 from contextlib import contextmanager
@@ -150,41 +151,6 @@ def timebox_handler(time, frame):
     raise TimeExceededError('Time limit exceeded.')
 
 
-# @contextmanager
-# def timebox(time):
-#     """Try to execute code for specified amount of time before throwing error.
-#     If you don't want to throw an error, use with a try/except block.
-
-#     Parameters
-#     ----------
-#     time: int
-#         Max number of seconds before throwing error.
-
-#     Examples
-#     --------
-#     with time_box(5) as tb:
-#         x = computationally_expensive_code()
-
-#     More permissive version:
-#     x = step_1()
-#     with timebox(5) as tb:
-#         try:
-#             x = slow_step_2()
-#         except TimeExceededError:
-#             pass
-#     """
-#     try:
-#         signal.signal(signal.SIGALRM, timebox_handler)
-#         signal.alarm(time)
-#         yield
-#     finally:
-#         signal.alarm(0)
-
-def permissive_timebox_handler(time, frame):
-    warnings.warn('Time limit exceeded.')
-    raise TimeoutError('timeout error')
-
-# TESTING
 @contextmanager
 def timebox(time, strict=True):
     """Try to execute code for specified amount of time before throwing error.
@@ -194,6 +160,11 @@ def timebox(time, strict=True):
     ----------
     time: int
         Max number of seconds before throwing error.
+    strict: bool
+        If True, timeout will cause an error to be raised, halting execution of
+        the entire program. If False, a warning message will be printed and 
+        the timeboxed operation will end, letting the program proceed to the
+        next step.
 
     Examples
     --------
@@ -208,19 +179,18 @@ def timebox(time, strict=True):
         except TimeExceededError:
             pass
     """
-    # handler = timebox_handler if strict else permissive_timebox_handler
     try:
         signal.signal(signal.SIGALRM, timebox_handler)
         signal.alarm(time)
         yield
     except TimeExceededError as e:
         if strict: raise
-        warnings.warn('Time limit exceeded.')
+        warnings.warn(e.args[0])
     finally:
         signal.alarm(0)
 
 
-def timeboxed(time):
+def timeboxed(time, strict=True):
     """Decorator version of timebox. Try to execute decorated function for
     `time` seconds before throwing exception.
 
@@ -228,6 +198,11 @@ def timeboxed(time):
     ----------
     time: int
         Max number of seconds before throwing error.
+    strict: bool
+        If True, timeout will cause an error to be raised, halting execution of
+        the entire program. If False, a warning message will be printed and 
+        the timeboxed operation will end, letting the program proceed to the
+        next step.
 
     Examples
     --------
@@ -238,7 +213,7 @@ def timeboxed(time):
     def intermediate_wrapper(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            with timebox(time) as tb:
+            with timebox(time, strict) as tb:
                 return func(*args, **kwargs)
         return wrapper
     return intermediate_wrapper
@@ -335,42 +310,69 @@ class ReadOnly:
     """
 
     def __init__(self):
-        self.value = _placeholder
+        self.value = SENTINEL
 
     def __get__(self, instance, cls):
         if instance is None:
             return self
-        elif self.value is _placeholder:
+        elif self.value is SENTINEL:
             warnings.warn('Value of read-only attribute has not yet been set.')
         else:
             return self.value
 
     def __set__(self, instance, value):
-        if self.value is _placeholder:
+        if self.value is SENTINEL:
             self.value = value
         else:
             raise ValueError('Attribute is read-only.')
 
 
+class Callback(ABC):
+    """Abstract base class for callback objects to be passed to @callbacks
+    decorator. Children must implement a __call__ method that accepts function
+    inputs and outputs.
+    """
+
+    @abstractmethod
+    def __call__(self, inputs, output=None):
+        """
+        Parameters
+        -------------
+        inputs: dict
+            Dictionary of bound arguments passed to the function being 
+            decorated.
+        output: any
+            Callbacks to be executed after the function call can pass the 
+            function output to the callback. The default None value will remain
+            for callbacks that execute before the function.
+        """
+        pass
+
+
 def callbacks(on_begin=None, on_end=None):
-    """IN PROGRESS.
-    
-    TODO: 
-    -Figure out what to do with callback outputs (print, return, ?).
-    -Figure out how to handle diff args/kwargs - should all callback functions
-    just accept args/kwargs? 
-        -maybe should create bound arguments w/ inspect.signature before
-        passing to callback, that should let cb access vars by name I think
+    """IN PROGRESS. Trying to figure out what inputs/outputs to callbacks
+    should be.
+
+    In this experimental version, dict of inputs are passed to on_begin.
+    On_end takes both dict of inputs and decorated function's output.
+
+    UPDATE: callbacks should be classes inheriting from abstract base class
+    Callback that implement __call__ method. This allows us to store states
+    rather than just printing or relying on global vars. Think about whether
+    output should have default None, SENTINEL, or no default (and whether this
+    should differ for on_begin vs. on_end callbacks).
     """
     on_begin = on_begin or []
     on_end = on_end or []
     def decorator(func):
         def wrapper(*args, **kwargs):
+            bound = inspect.signature(func).bind_partial(*args, **kwargs)
+            bound.apply_defaults()
             for cb in on_begin:
-                cb(*args, **kwargs)
+                cb(bound.arguments, None)
             out = func(*args, **kwargs)
             for cb in on_end:
-                cb(*args, **kwargs)
+                cb(bound.arguments, out)
             return out
         return wrapper
     return decorator
@@ -485,12 +487,12 @@ def debug_call(func):
     catch that the third argument is being passed in as the x parameter.
 
     @debug_call
-    def f(a, b, x=0, y=None, z=4, c=1):
+    def f(a, b, x=0, y=None, z=4, c=2):
         return a + b + c
 
     >>> f(3, 4, 1)
-    f(a=1, b=2, x=3)
-    4
+    f(a=3, b=4, x=1, y=None, z=4, c=9)
+    9
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -656,12 +658,35 @@ def htimer(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        start = time.time()
+        start = time.perf_counter()
         output = func(*args, **kwargs)
-        print(f'\n[TIMER]: function <{func.__name__}> executed in roughly '
-              f'{round(time.time() - start, 4)} seconds (conservatively).\n')
+        duration = time.perf_counter() - start
+        print(f'\n[TIMER]: {func.__name__} executed in approximately '
+              f'{duration:.3f} seconds.\n')
         return output
     return wrapper
+
+
+@contextmanager
+def block_timer():
+    """Context manager to time a block of code. This works similarly to htimer
+    but can be used on code outside of functions.
+
+    Examples
+    --------
+    with block_timer() as bt:
+        # Code inside the context manager will be timed.
+        arr = [str(i) for i in range(25_000_000)]
+        first = None
+        while first != '100':
+            arr.pop(0)
+    """
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        duration = time.perf_counter() - start
+        print(f'[TIMER]: Block executed in {duration:.3f} seconds.')
 
 
 def hsplit(text, sep, group=True, attach=True):
@@ -951,7 +976,9 @@ def differences(obj1, obj2, methods=False, **kwargs):
 
 
 def catch(func, *args, verbose=False):
-    """Error handling for list comprehensions.
+    """Error handling for list comprehensions. In practice, it's recommended
+    to use the higher-level robust_comp() function which uses catch() under the
+    hood.
 
     Parameters
     -----------
@@ -971,6 +998,8 @@ def catch(func, *args, verbose=False):
     [catch(lambda x: 1 / x, i) for i in range(3)]
     >>> [None, 1.0, 0.5]
 
+    # Note that the filtering method shown below also removes zeros which is
+    # okay in this case.
     list(filter(None, [catch(lambda x: 1 / x, i) for i in range(3)]))
     >>> [1.0, 0.5]
     """
@@ -980,6 +1009,30 @@ def catch(func, *args, verbose=False):
         if verbose:
             print(e)
         return
+
+
+def robust_comp(func, gen):
+    """
+    Parameters
+    ----------
+    func: function
+        Function to apply to each 
+    gen: generator
+        The sequence to iterate over. This could also be a list, set, etc.
+
+    Returns
+    -------
+    list
+
+    Examples
+    --------
+    # Notice that 
+    >>> robust_comp(lambda x: x/(x-2), range(4))
+    [-0.0, -1.0, 3.0]
+    """
+    return list(
+        filter(lambda x: x is not None, (catch(func, obj) for obj in gen))
+    )
 
 
 def flatten(nested):
@@ -1006,4 +1059,4 @@ def flatten(nested):
     return list(_walk(nested))
 
 
-_placeholder = object()
+SENTINEL = object()
