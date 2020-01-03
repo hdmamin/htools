@@ -94,6 +94,50 @@ class AutoInit:
         return f'{self.__class__.__name__}({", ".join(arg_strs)})'
 
 
+class AutoInitDev:
+    """Updated version of AutoInit that is slightly more user friendly 
+    (no more passing locals() to super()) but also slower and probably requires 
+    more testing (all the result of a frame hack). AutoInit is considered the
+    stabler option at the moment, but I'm adding this to the library
+    to make it easier to find possible bugs. In future versions this could 
+    replace the old AutoInit, in which case the version number will be updated
+    as this would be a breaking change. 
+    """
+
+    def __init__(self):
+        # Calculate how many frames to go back to get child class.
+        frame_idx = type(self).__mro__.index(AutoInitDev)
+        attrs = {k: v for k, v in sys._getframe(frame_idx).f_locals.items()
+                  if not k.startswith('__')}
+        attrs.pop('self')
+        bound = inspect.signature(self.__class__.__init__)\
+                       .bind_partial(**attrs)
+        
+        # Flatten dict so kwargs are not listed as their own argument.
+        bound.arguments.update(
+            bound.arguments.pop('kwargs', {}).get('kwargs', {})
+        )
+        self._init_keys = set(bound.arguments.keys())
+        for k, v in bound.arguments.items():
+            setattr(self, k, v)
+
+    def __repr__(self):
+        """Returns string representation of child class including variables
+        used in init method. For the example in the class docstring, this would
+        return:
+
+        child = Child('Henry', 8, 'm', 'brown', 52, 70, 3, 'green')
+        Child(name='Henry', age=8, sex='m', hair='brown', height=52, 
+              weight=70, grade=3, eyes='green')
+        
+        Returns
+        -------
+        str
+        """
+        fstrs = (f'{k}={repr(getattr(self, k))}' for k in self._init_keys)            
+        return f'{self.__class__.__name__}({", ".join(fstrs)})'
+
+
 def Args(**kwargs):
     """Wrapper to easily create a named tuple of arguments. Functions sometimes
     return multiple values, and we have a few options to handle this: we can
@@ -138,6 +182,47 @@ def Args(**kwargs):
     """
     args = namedtuple('Args', kwargs.keys())
     return args(*kwargs.values())
+
+
+@contextmanager
+def assert_raises(error):
+    """Context manager to assert that an error is raised. This can be nice
+    if we don't want to clutter up a notebook with error messages.
+
+    Parameters
+    ----------
+    error: class inheriting from Exception or BaseException
+        The type of error to catch, e.g. ValueError.
+
+    Examples
+    --------
+    # First example does not throw an error.
+    >>> with assert_raises(TypeError) as ar:
+    >>>     a = 'b' + 6
+
+    # Second example throws an error.
+    >>> with assert_raises(ValueError) as ar:
+    >>>     a = 'b' + 6
+
+    AssertionError: Wrong error raised. Expected PermissionError, got 
+    TypeError(can only concatenate str (not "int") to str)
+
+    # Third example throws an error because the code inside the context manager
+    # completed successfully.
+    >>> with assert_raises(ValueError) as ar:
+    >>>     a = 'b' + '6'
+
+    AssertionError: No error raised, expected PermissionError.
+    """
+    try:
+        yield
+    except error as e:
+        print(f'As expected, got {error.__name__}({e}).')
+    except Exception as e:
+        raise AssertionError(f'Wrong error raised. Expected {error.__name__},'
+                             f' got {type(e).__name__}({e}).') from None
+    else:
+        raise AssertionError(f'No error raised, expected {error.__name__}.')
 
 
 class TimeExceededError(Exception):
@@ -279,18 +364,15 @@ class cached_property:
 
 class ReadOnly:
     """Descriptor to make an attribute read-only. This means that once a value
-    has been set, the user cannot change it. Note that read-only attributes
-    must first be created as class variables (see example below).
-
-    Value is initially set to object() as a placeholder. This allows us to 
-    determine whether a value has been specified yet (if, for example, we used
-    None as a placeholder, we would encounter issues if the user chose to 
-    explicitly set a value of None).
+    has been set, the user cannot change or delete it. Note that read-only 
+    attributes must first be created as class variables (see example below). 
+    To allow more flexibility, we do allow the user to manually manipulate the 
+    instance dictionary.
 
     Examples
     --------
     class Dog:
-        breed = ReadOnly()
+        breed = ReadOnly('breed')
         def __init__(self, breed, age):
             # Once breed is set in the line below, it cannot be changed.
             self.breed = breed
@@ -303,25 +385,36 @@ class ReadOnly:
 
     >>> d.breed = 'labrador'
 
-    ValueError: Attribute is read-only.
+    PermissionError: Attribute is read-only.
+
+    >>> del d.breed
+    
+    PermissionError: Attribute is read-only.
     """
 
-    def __init__(self):
-        self.value = SENTINEL
+    def __init__(self, name):
+        self.name = name
+        self.initialized = set()
 
     def __get__(self, instance, cls):
         if instance is None:
             return self
-        elif self.value is SENTINEL:
-            warnings.warn('Value of read-only attribute has not yet been set.')
+        elif instance not in self.initialized:
+            warnings.warn(
+                f'Read-only attribute {self.name} has not been initialized.'
+            )
         else:
-            return self.value
+            return instance.__dict__[self.name]
 
     def __set__(self, instance, value):
-        if self.value is SENTINEL:
-            self.value = value
+        if instance not in self.initialized:
+            instance.__dict__[self.name] = value
+            self.initialized.add(instance)
         else:
-            raise ValueError('Attribute is read-only.')
+            raise PermissionError('Attribute is read-only.')
+
+    def __delete__(self, instance):
+        raise PermissionError('Attribute is read-only.')
 
 
 class Callback(ABC):
@@ -1009,13 +1102,14 @@ def catch(func, *args, verbose=False):
     try:
         return func(*args)
     except Exception as e:
-        if verbose:
-            print(e)
+        if verbose: print(e)
         return
 
 
 def robust_comp(func, gen):
-    """
+    """List comprehension with error handling. Note that values of None will be
+    removed from the resulting list.
+
     Parameters
     ----------
     func: function
