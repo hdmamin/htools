@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
-import bz2
+from bz2 import BZ2File
 from collections import namedtuple
 from contextlib import contextmanager
 from email.mime.text import MIMEText
 from functools import wraps, partial
 import inspect
 from itertools import chain
+import json
 import os
 import pickle
 import re
@@ -225,6 +226,10 @@ def assert_raises(error):
         raise AssertionError(f'No error raised, expected {error.__name__}.')
 
 
+class InvalidArgumentError(Exception):
+    pass
+
+
 class TimeExceededError(Exception):
     pass
 
@@ -416,6 +421,34 @@ class ReadOnly:
     def __delete__(self, instance):
         raise PermissionError('Attribute is read-only.')
 
+
+def validating_descriptor(func, allow_del=False):
+    """Descriptor that performs some user-specified validation when setting 
+    values. Attributes can be read as usual (i.e. no __get__ method) because 
+    we put the value in the instance dictionary. Retrieval is faster this way.
+    
+    Parameters
+    ----------
+    func: function
+        Function or lambda that accepts a single parameter. This will be used
+        when attempting to set a value for the managed attribute.
+    allow_del: bool
+        If True, allow the attribute to be deleted.
+    """
+    def descriptor(name):
+        @method.setter
+        def method(instance, val):
+            if lambda_(val):
+                instance.__dict__[name] = val
+            else:
+                raise ValueError(f'Invalid value {val} for argument {name}.')
+        if allow_del:
+            @method.deleter
+            def method(instance):
+                del instance.__dict__[name]
+        return method
+    return descriptor
+    
 
 class Callback(ABC):
     """Abstract base class for callback objects to be passed to @callbacks
@@ -907,19 +940,47 @@ def eprint(arr, indent=2, spacing=1):
         print(f'{i:>{indent}}: {x}', end='\n'*spacing)
 
 
-def save(obj, path, compress=True, verbose=True):
-    """Wrapper to quickly save a pickled object.
+def _read_write_args(path, mode):
+    """Helper for `save` and `load` functions.
+    
+    Parameters
+    ----------
+    path: str
+        Path to read/write object from/to.
+    mode: str
+        'w' for writing files (as in `save`), 'r' for reading files 
+        (as in `load`).
+    
+    Returns
+    -------
+    tuple: Function to open file, mode to open file with (str), object to open
+        file with.
+    """
+    ext = path.rpartition('.')[-1]
+    if ext not in {'json', 'pkl', 'zip'}:
+        raise InvalidArgumentError(
+            'Invalid extension. Make sure your filename ends with .json, '
+            '.pkl, or .zip.'
+        )
+        
+    # Store in dict to make it easier to add additional formats in future.
+    ext2data = {'pkl': (open, 'b', pickle), 
+                'zip': (BZ2File, '', pickle), 
+                'json': (open, '', json)}
+    opener, mode_suffix, saver = ext2data[ext]
+    return opener, mode + mode_suffix, saver
+
+def save(obj, path, verbose=True):
+    """Wrapper to save data as pickle (optionally zipped) or json.
 
     Parameters
     -----------
     obj: any
         Object to pickle.
     path: str
-        File name to save pickled object to.
-    compress: bool
-        If True, will compress the pickled object using the bz library (in 
-        this case, path should end with a .zip extension). If False, object
-        will not be compressed and path should end with a .pkl extension.
+        File name to save pickled object to. Should end with .pkl, .zip, or 
+        .json depending on desired output format. If .zip is used, object will
+        be zipped and then pickled.
     verbose: bool
         If True, print a message confirming that the data was pickled, along
         with its path.
@@ -929,25 +990,19 @@ def save(obj, path, compress=True, verbose=True):
     None
     """
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    if compress:
-        with bz2.BZ2File(path, 'w') as f:
-            pickle.dump(obj, f)
-    else:
-        with open(path, 'wb') as f:
-            pickle.dump(obj, f)
-    if verbose:
-        print(f'Data written to {path}.')
+    opener, mode, saver = _read_write_args(path, 'w')
+    with opener(path, mode) as f:
+        saver.dump(obj, f)
+    if verbose: print(f'Data written to {path}.')
 
 
-def load(path, decompress=True, verbose=True):
-    """Wrapper to load a pickled object.
+def load(path, verbose=True):
+    """Wrapper to load pickled (optionally zipped) or json data.
     
     Parameters
     ----------
     path : str
-        File to load.
-    decompress : bool, optional
-        Pass in True if object is zipped, False otherwise.
+        File to load. File type will be inferred from extension.
     verbose : bool, optional
         If True, will print message stating where object was loaded from.
     
@@ -955,15 +1010,10 @@ def load(path, decompress=True, verbose=True):
     -------
     object: The Python object that was pickled to the specified file.
     """
-    if decompress:
-        with bz2.BZ2File(path, 'r') as f:
-            data = pickle.load(f)
-    else:
-        with open(path, 'rb') as f:
-            data = pickle.load(f)
-
-    if verbose:
-        print(f'Object loaded from {path}.')
+    opener, mode, saver = _read_write_args(path, 'r')
+    with opener(path, mode) as f:
+        data = saver.load(f)
+    if verbose: print(f'Object loaded from {path}.')
     return data
 
 
