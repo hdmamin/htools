@@ -384,32 +384,71 @@ class ReadOnly:
         raise PermissionError('Attribute is read-only.')
 
 
-def validating_descriptor(func, allow_del=False):
-    """Descriptor that performs some user-specified validation when setting 
-    values. Attributes can be read as usual (i.e. no __get__ method) because 
-    we put the value in the instance dictionary. Retrieval is faster this way.
+def validating_property(func, allow_del=False):
+    """Factory that makes properties that perform some user-specified 
+    validation when setting values. The returned function must be used as a
+    descriptor to create a class variable before setting the instance 
+    attribute.
     
     Parameters
     ----------
     func: function
         Function or lambda that accepts a single parameter. This will be used
-        when attempting to set a value for the managed attribute.
+        when attempting to set a value for the managed attribute. It should 
+        return True if the value is acceptable, False otherwise.
     allow_del: bool
         If True, allow the attribute to be deleted.
+        
+    Returns
+    -------
+    function: A property with validation when setting values. Note that this 
+        will be used as a descriptor, so it must create a class variable as
+        shown below. In the example, also notice that the name passed to
+        LengthyInt mustt match the name of the variable it is assigned to.
+    
+    Examples
+    --------
+    LengthyInt = validating_property(
+        lambda x: isinstance(x, int) and len(str(int)) > 4
+    )
+    
+    class Foo:
+        long = LengthyInt('long')
+        def __init__(self, a, long):
+            self.a = a
+            self.long = long
+            
+    >>> foo = Foo(3, 4)
+    
+    ValueError: Invalid value 4 for argument long.
+   
+    # No error on instantiation because the argument is a valid LengthyInt. 
+    >>> foo = Foo(3, 543210)
+    >>> foo.long
+
+    543210
+   
+    >>> foo = Foo(3, 'abc')
+    ValueError: Invalid value 'abc' for argument long.
     """
-    def descriptor(name):
+    def prop(name):
+        @property
+        def method(instance):
+            return instance.__dict__[name]
+        
         @method.setter
         def method(instance, val):
-            if lambda_(val):
+            if func(val):
                 instance.__dict__[name] = val
             else:
                 raise ValueError(f'Invalid value {val} for argument {name}.')
+       
         if allow_del:
             @method.deleter
             def method(instance):
                 del instance.__dict__[name]
         return method
-    return descriptor
+    return prop
 
 
 class Callback(ABC):
