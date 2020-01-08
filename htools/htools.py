@@ -20,11 +20,18 @@ from htools.config import get_credentials, get_default_user
 
 
 class AutoInit:
-    """Mixin class where child class has a long list init arguments that will
-    be assigned to the same name. Note that *args are not supported in the
-    init method because each attribute that is defined in the resulting object
-    must have a name. A variable length list of args can still be passed in as
-    a single argument, of course, without the use of star unpacking.
+    """Mixin class where child class has a long list of init arguments where 
+    the parameter name and the class attribute will be the same. Note that 
+    *args are not supported in the init method because each attribute that is
+    defined in the resulting object must have a name. A variable length list
+    of args can still be passed in as a single argument, of course, without the
+    use of star unpacking.
+
+    This updated version of AutoInit is slightly more user friendly than in V1
+    (no more passing locals() to super()) but also slower and probably requires 
+    more testing (all because of the frame hack in the init method). Note that 
+    usage differs from the AutoInit present in htools<=2.0.0, so this is a  
+    breaking change.
 
     Examples
     --------
@@ -49,7 +56,7 @@ class AutoInit:
 
     class Child(AutoInit):
         def __init__(self, name, age, sex, hair, height, weight, grade, eyes):
-            super().__init__(locals())
+            super().__init__()
 
     Note that we could also use the following method, though this is less
     informative when constructing instances of the child class and does not
@@ -57,57 +64,12 @@ class AutoInit:
 
     class Child:
         def __init__(self, **kwargs):
-            self.__dict__ = kwargs
-    """
-    
-    def __init__(self, child_args):
-        """Initialize variables.
-        
-        Parameters
-        ----------
-        child_args : dict
-            Arguments passed to child class.
-        """
-        child_args.update(child_args.pop('kwargs', {}))
-        # Get param names from child args rather than instance dict since some
-        # attributes may not be stored in __dict__ (e.g. using @property).
-        self._init_keys = set()
-        for k, v in child_args.items():
-            if k == 'self' or k.startswith('__'):
-                continue
-            setattr(self, k, v)
-            self._init_keys.add(k)
-
-    def __repr__(self):
-        """Returns string representation of child class including variables
-        used in init method. For the example in the class docstring, this would
-        return:
-
-        child = Child('Henry', 8, 'm', 'brown', 52, 70, 3, 'green')
-        Child(name='Henry', age=8, sex='m', hair='brown', height=52, 
-              weight=70, grade=3, eyes='green')
-        
-        Returns
-        -------
-        str
-        """
-        arg_strs = (f'{k}={repr(getattr(self, k))}' for k in self._init_keys)
-        return f'{self.__class__.__name__}({", ".join(arg_strs)})'
-
-
-class AutoInitDev:
-    """Updated version of AutoInit that is slightly more user friendly 
-    (no more passing locals() to super()) but also slower and probably requires 
-    more testing (all the result of a frame hack). AutoInit is considered the
-    stabler option at the moment, but I'm adding this to the library
-    to make it easier to find possible bugs. In future versions this could 
-    replace the old AutoInit, in which case the version number will be updated
-    as this would be a breaking change. 
+            self.__dict__.update(kwargs)
     """
 
     def __init__(self):
         # Calculate how many frames to go back to get child class.
-        frame_idx = type(self).__mro__.index(AutoInitDev)
+        frame_idx = type(self).__mro__.index(AutoInit)
         attrs = {k: v for k, v in sys._getframe(frame_idx).f_locals.items()
                   if not k.startswith('__')}
         attrs.pop('self')
@@ -448,7 +410,7 @@ def validating_descriptor(func, allow_del=False):
                 del instance.__dict__[name]
         return method
     return descriptor
-    
+
 
 class Callback(ABC):
     """Abstract base class for callback objects to be passed to @callbacks
