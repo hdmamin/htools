@@ -472,6 +472,9 @@ class Callback(ABC):
         """
         pass
 
+    def __repr__(self):
+        return f'{type(self).__name__}()'
+
 
 def callbacks(*, on_begin=None, on_end=None):
     """Decorator that attaches callbacks to a function. Callbacks should be
