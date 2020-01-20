@@ -1,0 +1,1029 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>htools package &#8212; Htools 2 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="htools-package">
+<h1>htools package<a class="headerlink" href="#htools-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-htools.config">
+<span id="htools-config-module"></span><h2>htools.config module<a class="headerlink" href="#module-htools.config" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="htools.config.get_credentials">
+<code class="sig-prename descclassname">htools.config.</code><code class="sig-name descname">get_credentials</code><span class="sig-paren">(</span><em class="sig-param">from_email</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.config.get_credentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the user’s password for a specified email address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>from_email</strong> (<em>str</em>) – The email address to get the password for.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>str or None</strong> – it as a string. Otherwise, return None.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>If a password is found for the specified email address, return</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.config.get_default_user">
+<code class="sig-prename descclassname">htools.config.</code><code class="sig-name descname">get_default_user</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#htools.config.get_default_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get user’s default email address. If one has not been set, user has the
+option to set it here.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>str or None</strong> – declines to specify one, None is returned.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>A string containing the default email address. If user</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-htools.core">
+<span id="htools-core-module"></span><h2>htools.core module<a class="headerlink" href="#module-htools.core" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="htools.core.Args">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">Args</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.Args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper to easily create a named tuple of arguments. Functions sometimes
+return multiple values, and we have a few options to handle this: we can
+return them as a regular tuple, but it is often convenient to be able to
+reference items by name rather than position. If we want the output to be
+mutable, we can return a dictionary, but this still requires more space
+than a tuple and bracket notation is arguably less convenient than dot
+notation. We can create a new namedtuple inside the function, but this
+kind of seems like overkill to create a new type of namedtuple for each
+function.</p>
+<p>Instead, this lets us create a namedtuple of Args on the fly just as easily
+as making a dictionary.</p>
+<p class="rubric">Examples</p>
+<dl>
+<dt>def math_summary(x, y):</dt><dd><p><a href="#id17"><span class="problematic" id="id18">sum_</span></a> = x + y
+prod = x * y
+diff = x - y
+quotient = x / y
+return Args(sum=sum_,</p>
+<blockquote>
+<div><p>product=prod,
+difference=diff,
+quotient=quotient)</p>
+</div></blockquote>
+</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span> <span class="o">=</span> <span class="n">math_summary</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span><span class="o">.</span><span class="n">product</span>
+</pre></div>
+</div>
+<p>8</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span><span class="o">.</span><span class="n">quotient</span>
+</pre></div>
+</div>
+<p>2</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span>
+</pre></div>
+</div>
+<p>Args(sum=6, product=8, difference=2, quotient=2)</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="htools.core.InvalidArgumentError">
+<em class="property">exception </em><code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">InvalidArgumentError</code><a class="headerlink" href="#htools.core.InvalidArgumentError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.core.LambdaDict">
+<em class="property">class </em><code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">LambdaDict</code><span class="sig-paren">(</span><em class="sig-param">default_function</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.LambdaDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
+<p>Create a default dict where the default function can accept parameters.
+Whereas the defaultdict in Collections can set the default as int or list,
+here we can pass in any function where the key is the parameter.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.catch">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">catch</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">*args</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.catch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Error handling for list comprehensions. In practice, it’s recommended
+to use the higher-level robust_comp() function which uses catch() under the
+hood.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – </p></li>
+<li><p><strong>*args</strong> (<em>any type</em>) – Arguments to be passed to func.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – If True, print the error message should one occur.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>any type</strong> – Otherwise, return None.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>If the function executes successfully, its output is returned.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>[catch(lambda x: 1 / x, i) for i in range(3)]
+&gt;&gt;&gt; [None, 1.0, 0.5]</p>
+<p># Note that the filtering method shown below also removes zeros which is
+# okay in this case.
+list(filter(None, [catch(lambda x: 1 / x, i) for i in range(3)]))
+&gt;&gt;&gt; [1.0, 0.5]</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.dict_sum">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">dict_sum</code><span class="sig-paren">(</span><em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.dict_sum" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>Given two or more dictionaries with numeric values, combine them into a</dt><dd><p>single dictionary. For keys that appear in multiple dictionaries, their
+corresponding values are added to produce the new value.</p>
+<p>This differs from combining two dictionaries in the following manner:</p>
+<p>{<a href="#id1"><span class="problematic" id="id2">**</span></a>d1, <a href="#id3"><span class="problematic" id="id4">**</span></a>d2}</p>
+<p>The method shown above will combine the keys but will retain the value
+from d2, rather than adding the values from d1 and d2.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>*args</strong> (<em>dicts</em>) – 2 or more dictionaries with numeric values.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dict</strong> – passed in. The corresponding values from each dictionary containing a
+given key are summed to produce the new value.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Contains all keys which appear in any of the dictionaries that are</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">d1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">d2</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">:</span> <span class="mi">30</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">d3</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;e&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dict_sum</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>{‘a’: 11, ‘b’: 2, ‘c’: -7, ‘d’: 35, ‘e’: 0}</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.differences">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">differences</code><span class="sig-paren">(</span><em class="sig-param">obj1</em>, <em class="sig-param">obj2</em>, <em class="sig-param">methods=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.differences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the differences between two objects of the same type. This is a
+way to get more detail beyond whether two objects are equal or not.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj1</strong> (<em>any type</em>) – An object.</p></li>
+<li><p><strong>obj2</strong> (<em>same type as obj1</em>) – An object.</p></li>
+<li><p><strong>methods</strong> (<em>bool</em>) – <p>If True, include methods in the comparison. If False, only attributes
+will be compared. Note that the output may not be particularly
+interpretable when using method=True; for instance when comparing two
+strings consisting of different characters, we get a lot of output
+that looks like this:</p>
+<p>{‘islower’: (&lt;function str.islower()&gt;, &lt;function str.islower()&gt;),
+‘isupper’: (&lt;function str.isupper()&gt;, &lt;function str.isupper()&gt;),…
+‘istitle’: (&lt;function str.istitle()&gt;, &lt;function str.istitle()&gt;)}</p>
+<p>These attributes all reflect the same difference: if obj1 is ‘abc’
+and obj2 is ‘def’, then
+‘abc’ != ‘def’ and
+‘ABC’ != ‘DEF’ abd
+‘Abc’ != ‘Def’.</p>
+<p>When method=False, we ignore all of these, such that
+differences(‘a’, ‘b’) returns {}. Therefore, it is important to
+carefully consider what differences you care about identifying.</p>
+</p></li>
+<li><p><strong>**kwargs</strong> (<em>bool</em>) – Can pass args to hdir to include magics or internals.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dict[str, tuple]</strong> – first is the corresponding value for obj1 and the second is the
+corresponding value for obj2.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Maps attribute name to a tuple of values, where the</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.eprint">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">eprint</code><span class="sig-paren">(</span><em class="sig-param">arr</em>, <em class="sig-param">indent=2</em>, <em class="sig-param">spacing=1</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.eprint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enumerated print. Prints an iterable with one item per line accompanied
+by a number specifying its index in the iterable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arr</strong> (<em>iterable</em>) – The object to be iterated over.</p></li>
+<li><p><strong>indent</strong> (<em>int</em>) – Width to assign to column of integer indices. Default is 2, meaning
+columns will line up as long as &lt;100 items are being printed, which is
+the expected use case.</p></li>
+<li><p><strong>spacing</strong> (<em>int</em>) – Line spacing. Default of 1 will print each item on a new line with no
+blank lines in between. Spacing of 2 will double space output, and so
+on for larger values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.flatten">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">flatten</code><span class="sig-paren">(</span><em class="sig-param">nested</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.flatten" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flatten a nested sequence where the sub-items can be sequences or
+primitives. This differs slightly from itertools chain methods because
+those require all sub-items to be sequences. Here, items can be primitives,
+sequences, nested sequences, or any combination of these. This also returns
+a list rather than a generator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>nested</strong> (<em>sequence</em><em> (</em><em>list</em><em>, </em><em>tuple</em><em>, </em><em>set</em><em>)</em>) – Sequence where some or all of the items are also sequences.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>list</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Flattened version of <cite>nested</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.hdir">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">hdir</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">magics=False</em>, <em class="sig-param">internals=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.hdir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print object methods and attributes, by default excluding magic methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> (<em>any type</em>) – The object to print methods and attributes for.</p></li>
+<li><p><strong>magics</strong> (<em>bool</em>) – Specifies whether to include magic methods (e.g. __name__, __hash__).
+Default False.</p></li>
+<li><p><strong>internals</strong> (<em>bool</em>) – Specifies whether to include internal methods (e.g. _dfs, _name).
+Default False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Keys are method/attribute names, values are strings specifying whether
+the corresponding key is a ‘method’ or an ‘attr’.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.hsplit">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">hsplit</code><span class="sig-paren">(</span><em class="sig-param">text</em>, <em class="sig-param">sep</em>, <em class="sig-param">group=True</em>, <em class="sig-param">attach=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.hsplit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flexible string splitting that retains the delimiter rather, unlike
+the built-in str.split() method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<em>str</em>) – The input text to be split.</p></li>
+<li><p><strong>sep</strong> (<em>str</em>) – The delimiter to be split on.</p></li>
+<li><p><strong>group</strong> (<em>bool</em>) – Specifies whether to group consecutive delimiters together (True),
+or to separate them (False).</p></li>
+<li><p><strong>attach</strong> (<em>bool</em>) – Specifies whether to attach the delimiter to the string that preceeds
+it (True), or to detach it so it appears in the output list as its own
+item (False).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>text = “Score – Giants win 6-5”
+sep = ‘-‘</p>
+<p># Case 0.1: Delimiters are grouped together and attached to the preceding
+word.
+&gt;&gt; hsplit(text, sep, group=True, attach=True)
+&gt;&gt; [‘Score –’, ‘ Giants win 6-‘, ‘5’]</p>
+<p># Case 0.2: Delimiters are grouped together but are detached from the
+preceding word, instead appearing as their own item in the output list.
+&gt;&gt; hsplit(text, sep, group=True, attach=False)
+&gt;&gt; [‘Score ‘, ‘–’, ‘ Giants win 6’, ‘-‘, ‘5’]</p>
+<p>Case 1.1: Delimiters are retained and attached to the preceding string.
+If the delimiter occurs multiple times consecutively, only the first
+occurrence is attached, and the rest appear as individual items in the
+output list.
+&gt;&gt; hsplit(text, sep, group=False, attach=True)
+&gt;&gt; [‘Score -‘, ‘-‘, ‘ Giants win 6-‘, ‘5’]</p>
+<p># Case 1.2: Delimiters are retained but are detached from the preceding
+string. Each instance appears as its own item in the output list.
+&gt;&gt; hsplit(text, sep, group=False, attach=False)
+&gt;&gt; [‘Score ‘, ‘-‘, ‘-‘, ‘ Giants win 6’, ‘-‘, ‘5’]</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.load">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper to load pickled (optionally zipped) or json data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – File to load. File type will be inferred from extension.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, will print message stating where object was loaded from.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>object</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The Python object that was pickled to the specified file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.print_object_sizes">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">print_object_sizes</code><span class="sig-paren">(</span><em class="sig-param">space</em>, <em class="sig-param">limit=None</em>, <em class="sig-param">exclude_underscore=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.print_object_sizes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print the object names and sizes of the currently defined objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>space</strong> (<em>dict</em>) – locals(), globals(), or vars()</p></li>
+<li><p><strong>limit</strong> (<em>int</em><em> or </em><em>None</em>) – Optionally limit the number of objects displayed (default None for no
+limit).</p></li>
+<li><p><strong>exclude_underscore</strong> (<em>bool</em>) – Determine whether to exclude objects whose names start with an
+underscore (default True).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.quickmail">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">quickmail</code><span class="sig-paren">(</span><em class="sig-param">subject</em>, <em class="sig-param">message</em>, <em class="sig-param">to_email</em>, <em class="sig-param">from_email=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.quickmail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send an email.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>from_email</strong> (<em>str</em>) – Gmail address being used to send email.</p></li>
+<li><p><strong>to_email</strong> (<em>str</em>) – Recipient’s email.</p></li>
+<li><p><strong>subject</strong> (<em>str</em>) – Subject line of email.</p></li>
+<li><p><strong>message</strong> (<em>str</em>) – Body of email.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.robust_comp">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">robust_comp</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">gen</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.robust_comp" title="Permalink to this definition">¶</a></dt>
+<dd><p>List comprehension with error handling. Note that values of None will be
+removed from the resulting list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – Function to apply to each</p></li>
+<li><p><strong>gen</strong> (<em>generator</em>) – The sequence to iterate over. This could also be a list, set, etc.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p># Notice that
+&gt;&gt;&gt; robust_comp(lambda x: x/(x-2), range(4))
+[-0.0, -1.0, 3.0]</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.save">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">path</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper to save data as pickle (optionally zipped) or json.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> (<em>any</em>) – Object to pickle.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – File name to save pickled object to. Should end with .pkl, .zip, or
+.json depending on desired output format. If .zip is used, object will
+be zipped and then pickled.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – If True, print a message confirming that the data was pickled, along
+with its path.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.tdir">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">tdir</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.tdir" title="Permalink to this definition">¶</a></dt>
+<dd><p>A variation of the built in <cite>dir</cite> function that shows the
+attribute names as well as their types. Methods are excluded as they can
+change the object’s state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> (<em>any type</em>) – The object to examine.</p></li>
+<li><p><strong>kwargs</strong> (<em>bool</em>) – Additional arguments to be passed to hdir. Options are <cite>magics</cite> and
+<cite>internals</cite>. See hdir documentation for more information.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>dict[str, type]</strong> (<em>Dictionary mapping the name of the object’s attributes to</em>)</p></li>
+<li><p><em>the corresponding types of those attributes.</em></p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="htools-magics-module">
+<h2>htools.magics module<a class="headerlink" href="#htools-magics-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-htools.meta">
+<span id="htools-meta-module"></span><h2>htools.meta module<a class="headerlink" href="#module-htools.meta" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="htools.meta.AutoInit">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">AutoInit</code><a class="headerlink" href="#htools.meta.AutoInit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Mixin class where child class has a long list of init arguments where
+the parameter name and the class attribute will be the same. Note that
+<a href="#id5"><span class="problematic" id="id6">*</span></a>args are not supported in the init method because each attribute that is
+defined in the resulting object must have a name. A variable length list
+of args can still be passed in as a single argument, of course, without the
+use of star unpacking.</p>
+<p>This updated version of AutoInit is slightly more user friendly than in V1
+(no more passing locals() to super()) but also slower and probably requires
+more testing (all because of the frame hack in the init method). Note that
+usage differs from the AutoInit present in htools&lt;=2.0.0, so this is a
+breaking change.</p>
+<p class="rubric">Examples</p>
+<p>Without AutoInit:</p>
+<dl class="simple">
+<dt>class Child:</dt><dd><dl class="simple">
+<dt>def __init__(self, name, age, sex, hair, height, weight, grade, eyes):</dt><dd><p>self.name = name
+self.age = age
+self.sex = sex
+self.hair = hair
+self.height = height
+self.weight = weight
+self.grade = grade
+self.eyes = eyes</p>
+</dd>
+<dt>def __repr__(self):</dt><dd><p>return f’Child(name={self.name}, age={self.age}, sex={self.sex}, ‘                   f’hair={self.hair}, weight={self.weight}, ‘                   f’grade={self.grade}, eyes={self.eyes})’</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>With AutoInit:</p>
+<dl class="simple">
+<dt>class Child(AutoInit):</dt><dd><dl class="simple">
+<dt>def __init__(self, name, age, sex, hair, height, weight, grade, eyes):</dt><dd><p>super().__init__()</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Note that we could also use the following method, though this is less
+informative when constructing instances of the child class and does not
+have the built in __repr__ that comes with AutoInit:</p>
+<dl class="simple">
+<dt>class Child:</dt><dd><dl class="simple">
+<dt>def __init__(self, <a href="#id7"><span class="problematic" id="id8">**</span></a>kwargs):</dt><dd><p>self.__dict__.update(kwargs)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.Callback">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">Callback</code><a class="headerlink" href="#htools.meta.Callback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>Abstract base class for callback objects to be passed to &#64;callbacks
+decorator. Children must implement a __call__ method that accepts function
+inputs and outputs.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.ReadOnly">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">ReadOnly</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.ReadOnly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Descriptor to make an attribute read-only. This means that once a value
+has been set, the user cannot change or delete it. Note that read-only
+attributes must first be created as class variables (see example below).
+To allow more flexibility, we do allow the user to manually manipulate the
+instance dictionary.</p>
+<p class="rubric">Examples</p>
+<dl>
+<dt>class Dog:</dt><dd><p>breed = ReadOnly(‘breed’)
+def __init__(self, breed, age):</p>
+<blockquote>
+<div><p># Once breed is set in the line below, it cannot be changed.
+self.breed = breed
+self.age = age</p>
+</div></blockquote>
+</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="n">Dog</span><span class="p">(</span><span class="s1">&#39;dalmatian&#39;</span><span class="p">,</span> <span class="s1">&#39;Arnold&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span><span class="o">.</span><span class="n">breed</span>
+</pre></div>
+</div>
+<p>‘dalmatian’</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">d</span><span class="o">.</span><span class="n">breed</span> <span class="o">=</span> <span class="s1">&#39;labrador&#39;</span>
+</pre></div>
+</div>
+<p>PermissionError: Attribute is read-only.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">del</span> <span class="n">d</span><span class="o">.</span><span class="n">breed</span>
+</pre></div>
+</div>
+<p>PermissionError: Attribute is read-only.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="htools.meta.TimeExceededError">
+<em class="property">exception </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">TimeExceededError</code><a class="headerlink" href="#htools.meta.TimeExceededError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.assert_raises">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">assert_raises</code><span class="sig-paren">(</span><em class="sig-param">error</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.assert_raises" title="Permalink to this definition">¶</a></dt>
+<dd><p>Context manager to assert that an error is raised. This can be nice
+if we don’t want to clutter up a notebook with error messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>error</strong> (<em>class inheriting from Exception</em><em> or </em><em>BaseException</em>) – The type of error to catch, e.g. ValueError.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p># First example does not throw an error.
+&gt;&gt;&gt; with assert_raises(TypeError) as ar:
+&gt;&gt;&gt;     a = ‘b’ + 6</p>
+<p># Second example throws an error.
+&gt;&gt;&gt; with assert_raises(ValueError) as ar:
+&gt;&gt;&gt;     a = ‘b’ + 6</p>
+<p>AssertionError: Wrong error raised. Expected PermissionError, got
+TypeError(can only concatenate str (not “int”) to str)</p>
+<p># Third example throws an error because the code inside the context manager
+# completed successfully.
+&gt;&gt;&gt; with assert_raises(ValueError) as ar:
+&gt;&gt;&gt;     a = ‘b’ + ‘6’</p>
+<p>AssertionError: No error raised, expected PermissionError.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.block_timer">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">block_timer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.block_timer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Context manager to time a block of code. This works similarly to &#64;timer
+but can be used on code outside of functions.</p>
+<p class="rubric">Examples</p>
+<dl>
+<dt>with block_timer() as bt:</dt><dd><p># Code inside the context manager will be timed.
+arr = [str(i) for i in range(25_000_000)]
+first = None
+while first != ‘100’:</p>
+<blockquote>
+<div><p>arr.pop(0)</p>
+</div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.cached_property">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">cached_property</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.cached_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Decorator for computationally expensive methods that should only be
+computed once (i.e. they take zero arguments aside from self and are slow
+to execute). Lowercase name is used for consistency with more decorators.
+Heavily influenced by example in <cite>Python Cookbook</cite> by David Beazley and
+Brian K. Jones. Note that, as with the &#64;property decorator, no parentheses
+are used when calling the decorated method.</p>
+<p class="rubric">Examples</p>
+<p>class Vocab:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, tokens):</dt><dd><p>self.tokens = tokens</p>
+</dd>
+</dl>
+<p>&#64;cached_property
+def embedding_matrix(self):</p>
+<blockquote>
+<div><p>print(‘Building matrix…’)
+# Slow computation to build and return a matrix of word embeddings.
+return matrix</p>
+</div></blockquote>
+</div></blockquote>
+<p># First call is slow.
+&gt;&gt;&gt; v = Vocab(tokens)
+&gt;&gt;&gt; v.embedding_matrix</p>
+<p>Building matrix…
+[[.03, .5, .22, .01],</p>
+<blockquote>
+<div><p>[.4, .13, .06, .55]
+[.77, .14, .05, .9]]</p>
+</div></blockquote>
+<p># Second call accesses attribute without re-computing
+# (notice no “Building matrix” message).
+&gt;&gt;&gt; v = Vocab(tokens)
+&gt;&gt;&gt; v.embedding_matrix</p>
+<dl class="simple">
+<dt>[[.03, .5, .22, .01],</dt><dd><p>[.4, .13, .06, .55]
+[.77, .14, .05, .9]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.callbacks">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">callbacks</code><span class="sig-paren">(</span><em class="sig-param">*</em>, <em class="sig-param">on_begin=None</em>, <em class="sig-param">on_end=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.callbacks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that attaches callbacks to a function. Callbacks should be
+defined as classes inheriting from abstract base class Callback that
+implement a __call__ method. This allows us to store states
+rather than just printing outputs or relying on global vars.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>on_begin</strong> (<em>list</em>) – Callbacks to be executed before the decorated function.</p></li>
+<li><p><strong>on_end</strong> (<em>list</em>) – Callbacks to be executed after the decorated function.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>&#64;callbacks(on_begin=[print_hyperparameters],</dt><dd><p>on_end=[plot_activation_hist, activation_means, print_output])</p>
+</dd>
+<dt>def train(<a href="#id9"><span class="problematic" id="id10">**</span></a>kwargs):</dt><dd><p># Train model and return loss.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.debug_call">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">debug_call</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.debug_call" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to help debug function calls. In general, this is not meant to
+permanently decorate a function, but rather to be used temporarily when
+debugging a function call. Note that a wrapped function that accepts <a href="#id11"><span class="problematic" id="id12">*</span></a>args
+will display a signature including an ‘args’ parameter even though it isn’t
+a named parameter, because the goal here is to explicitly show which values
+are being passed to which parameters. This does mean that the printed
+string won’t be executable code in this case, but that shouldn’t be
+necessary anyway since it would contain the same call that was just used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>function</em>) – Function being decorated.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Occasionally, you might pass arguments to different parameters than you
+intended. Throwing a debug_call decorator on the function helps you check
+that the arguments are matching up as expected. For example, the parameter
+names in the function below have an unexpected order, so you could easily
+make the following call and expect to get 8. The debug decorator helps
+catch that the third argument is being passed in as the x parameter.</p>
+<p>&#64;debug_call
+def f(a, b, x=0, y=None, z=4, c=2):</p>
+<blockquote>
+<div><p>return a + b + c</p>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="go">f(a=3, b=4, x=1, y=None, z=4, c=9)</span>
+<span class="go">9</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.timebox">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timebox</code><span class="sig-paren">(</span><em class="sig-param">time</em>, <em class="sig-param">strict=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timebox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to execute code for specified amount of time before throwing error.
+If you don’t want to throw an error, use with a try/except block.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>time</strong> (<em>int</em>) – Max number of seconds before throwing error.</p></li>
+<li><p><strong>strict</strong> (<em>bool</em>) – If True, timeout will cause an error to be raised, halting execution of
+the entire program. If False, a warning message will be printed and
+the timeboxed operation will end, letting the program proceed to the
+next step.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>with time_box(5) as tb:</dt><dd><p>x = computationally_expensive_code()</p>
+</dd>
+</dl>
+<p>More permissive version:
+x = step_1()
+with timebox(5) as tb:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>try:</dt><dd><p>x = slow_step_2()</p>
+</dd>
+<dt>except TimeExceededError:</dt><dd><p>pass</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.timebox_handler">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timebox_handler</code><span class="sig-paren">(</span><em class="sig-param">time</em>, <em class="sig-param">frame</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timebox_handler" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.timeboxed">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timeboxed</code><span class="sig-paren">(</span><em class="sig-param">time</em>, <em class="sig-param">strict=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timeboxed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator version of timebox. Try to execute decorated function for
+<cite>time</cite> seconds before throwing exception.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>time</strong> (<em>int</em>) – Max number of seconds before throwing error.</p></li>
+<li><p><strong>strict</strong> (<em>bool</em>) – If True, timeout will cause an error to be raised, halting execution of
+the entire program. If False, a warning message will be printed and
+the timeboxed operation will end, letting the program proceed to the
+next step.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>&#64;timeboxed(5)
+def func(x, y):</p>
+<blockquote>
+<div><p># If function does not complete within 5 seconds, will throw error.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.timer">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timer</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide conservative time estimate for a function to run. Behavior may
+not be interpretable for recursive functions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>function</em>) – The function to time.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>import time</p>
+<p>&#64;timer
+def count_to(x):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>for i in range(x):</dt><dd><p>time.sleep(0.5)</p>
+</dd>
+</dl>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">count_to</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="go">[TIMER]: count_to executed in approximately 5.0365 seconds.</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.typecheck">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">typecheck</code><span class="sig-paren">(</span><em class="sig-param">func_=None</em>, <em class="sig-param">**types</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.typecheck" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to enforce type checking for a function or method. There are
+two ways to call this: either explicitly passing argument types to the
+decorator, or letting it infer them using type annotations in the function
+that will be decorated. We allow multiple both usage methods since older
+versions of Python lack type annotations, and also because I feel the
+annotation syntax can hurt readability.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func_</strong> (<em>function</em>) – The function to decorate. When using decorator with
+manually-specified types, this is None. Underscore is used so that
+<cite>func</cite> can still be used as a valid keyword argument for the wrapped
+function.</p></li>
+<li><p><strong>types</strong> (<em>type</em>) – Optional way to specify variable types. Use standard types rather than
+importing from the typing library, as subscripted generics are not
+supported (e.g. typing.List[str] will not work; typing.List will but at
+that point there is no benefit over the standard <cite>list</cite>).</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>In the first example, we specify types directly in the decorator. Notice
+that they can be single types or tuples of types. You can choose to
+specify types for all arguments or just a subset.</p>
+<p>&#64;typecheck(x=float, y=(int, float), iters=int, verbose=bool)
+def process(x, y, z, iters=5, verbose=True):</p>
+<blockquote>
+<div><p>print(f’z = {z}’)
+for i in range(iters):</p>
+<blockquote>
+<div><p>if verbose: print(f’Iteration {i}…’)
+x <a href="#id13"><span class="problematic" id="id14">*</span></a>= y</p>
+</div></blockquote>
+<p>return x</p>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">process</span><span class="p">(</span><span class="mf">3.1</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+<span class="go">TypeError: iters must be &lt;class &#39;int&#39;&gt;, not &lt;class &#39;float&#39;&gt;.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">process</span><span class="p">(</span><span class="mf">3.1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+<span class="go">z = a</span>
+<span class="go">12.4</span>
+</pre></div>
+</div>
+<p>Alternatively, you can let the decorator infer types using annotations
+in the function that is to be decorated. The example below behaves
+equivalently to the explicit example shown above. Note that annotations
+regarding the returned value are ignored.</p>
+<p>&#64;typecheck
+def process(x:float, y:(int, float), z, iters:int=5, verbose:bool=True):</p>
+<blockquote>
+<div><p>print(f’z = {z}’)
+for i in range(iters):</p>
+<blockquote>
+<div><p>if verbose: print(f’Iteration {i}…’)
+x <a href="#id15"><span class="problematic" id="id16">*</span></a>= y</p>
+</div></blockquote>
+<p>return x</p>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">process</span><span class="p">(</span><span class="mf">3.1</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+<span class="go">TypeError: iters must be &lt;class &#39;int&#39;&gt;, not &lt;class &#39;float&#39;&gt;.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">process</span><span class="p">(</span><span class="mf">3.1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+<span class="go">z = a</span>
+<span class="go">12.4</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.validating_property">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">validating_property</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">allow_del=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.validating_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Factory that makes properties that perform some user-specified
+validation when setting values. The returned function must be used as a
+descriptor to create a class variable before setting the instance
+attribute.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – Function or lambda that accepts a single parameter. This will be used
+when attempting to set a value for the managed attribute. It should
+return True if the value is acceptable, False otherwise.</p></li>
+<li><p><strong>allow_del</strong> (<em>bool</em>) – If True, allow the attribute to be deleted.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>function</strong> – will be used as a descriptor, so it must create a class variable as
+shown below. In the example, also notice that the name passed to
+LengthyInt mustt match the name of the variable it is assigned to.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>A property with validation when setting values. Note that this</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>LengthyInt = validating_property(</dt><dd><p>lambda x: isinstance(x, int) and len(str(int)) &gt; 4</p>
+</dd>
+</dl>
+<p>)</p>
+<dl>
+<dt>class Foo:</dt><dd><p>long = LengthyInt(‘long’)
+def __init__(self, a, long):</p>
+<blockquote>
+<div><p>self.a = a
+self.long = long</p>
+</div></blockquote>
+</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>ValueError: Invalid value 4 for argument long.</p>
+<p># No error on instantiation because the argument is a valid LengthyInt.
+&gt;&gt;&gt; foo = Foo(3, 543210)
+&gt;&gt;&gt; foo.long</p>
+<p>543210</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;abc&#39;</span><span class="p">)</span>
+<span class="go">ValueError: Invalid value &#39;abc&#39; for argument long.</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-htools">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-htools" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Htools</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Harrison Mamin.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/htools.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

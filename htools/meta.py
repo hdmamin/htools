@@ -461,7 +461,6 @@ def typecheck(func_=None, **types):
     versions of Python lack type annotations, and also because I feel the 
     annotation syntax can hurt readability.
     
-
     Parameters
     ----------
     func_: function
