@@ -559,8 +559,9 @@ def robust_comp(func, gen):
 def flatten(nested):
     """Flatten a nested sequence where the sub-items can be sequences or 
     primitives. This differs slightly from itertools chain methods because
-    those require all sub-items to be sequences. This also returns a list 
-    rather than a generator.
+    those require all sub-items to be sequences. Here, items can be primitives,
+    sequences, nested sequences, or any combination of these. This also returns
+    a list rather than a generator.
 
     Parameters
     ----------
@@ -574,7 +575,7 @@ def flatten(nested):
     def _walk(nested):
         for group in nested:
             try:
-                yield from group
+                yield from _walk(group)
             except TypeError:
                 yield group
     return list(_walk(nested))
