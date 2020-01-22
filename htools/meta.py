@@ -393,61 +393,75 @@ def validating_property(func, allow_del=False):
 
 class Callback(ABC):
     """Abstract base class for callback objects to be passed to @callbacks
-    decorator. Children must implement a __call__ method that accepts function
-    inputs and outputs.
+    decorator. Children must implement on_begin and on_end methods. Both should
+    accept the decorated function's inputs and output as arguments
+
+    Often, we may want to use the @debug decorator on one or both of these
+    methods. If both methods should perform the same steps, one shortcut
+    is to implement a single undecorated __call__ method, then have the
+    debug-decorated on_begin and on_end methods return self(inputs, output).
     """
 
     @abstractmethod
-    def __call__(self, inputs, output=None):
+    def on_begin(self, inputs, output=None):
         """
         Parameters
         -------------
         inputs: dict
-            Dictionary of bound arguments passed to the function being 
-            decorated.
+            Dictionary of bound arguments passed to the function being
+            decorated with @callbacks.
         output: any
-            Callbacks to be executed after the function call can pass the 
+            Callbacks to be executed after the function call can pass the
             function output to the callback. The default None value will remain
             for callbacks that execute before the function.
         """
-        pass
+
+    @abstractmethod
+    def on_end(self, inputs, output=None):
+        """
+        Parameters
+        -------------
+        inputs: dict
+            Dictionary of bound arguments passed to the function being
+            decorated with @callbacks.
+        output: any
+            Callbacks to be executed after the function call can pass the
+            function output to the callback. The default None value will remain
+            for callbacks that execute before the function.
+        """
 
     def __repr__(self):
         return f'{type(self).__name__}()'
 
 
-def callbacks(*, on_begin=None, on_end=None):
+def callbacks(cbs):
     """Decorator that attaches callbacks to a function. Callbacks should be
-    defined as classes inheriting from abstract base class Callback that 
-    implement a __call__ method. This allows us to store states
-    rather than just printing outputs or relying on global vars.
+    defined as classes inheriting from abstract base class Callback that
+    implement on_begin and on_end methods. This allows us to store states
+    rather than just printing outputs or relying on global variables.
 
     Parameters
     ----------
-    on_begin: list
-        Callbacks to be executed before the decorated function.
-    on_end: list
-        Callbacks to be executed after the decorated function.
+    cbs: list
+        List of callbacks to execute before and after the decorated function.
 
     Examples
     --------
-    @callbacks(on_begin=[print_hyperparameters],
-               on_end=[plot_activation_hist, activation_means, print_output])
-    def train(**kwargs):
-        # Train model and return loss.
+    @callbacks([PrintHyperparameters(), PlotActivationHist(),
+                ActivationMeans(), PrintOutput()])
+    def train_one_epoch(**kwargs):
+        # Train model.
     """
-    on_begin = on_begin or []
-    on_end = on_end or []
-
     def decorator(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             bound = inspect.signature(func).bind_partial(*args, **kwargs)
             bound.apply_defaults()
-            for cb in on_begin:
-                cb(bound.arguments, None)
+            for cb in cbs:
+                cb.on_begin(bound.arguments, None)
             out = func(*args, **kwargs)
-            for cb in on_end:
-                cb(bound.arguments, out)
+            for cb in cbs:
+                cb.on_end(bound.arguments, out)
             return out
         return wrapper
     return decorator
@@ -460,7 +474,7 @@ def typecheck(func_=None, **types):
     that will be decorated. We allow multiple both usage methods since older
     versions of Python lack type annotations, and also because I feel the 
     annotation syntax can hurt readability.
-    
+
     Parameters
     ----------
     func_: function
@@ -536,46 +550,71 @@ def typecheck(func_=None, **types):
     return wrapper
 
 
-def debug_call(func):
-    """Decorator to help debug function calls. In general, this is not meant to
-    permanently decorate a function, but rather to be used temporarily when
-    debugging a function call. Note that a wrapped function that accepts *args
-    will display a signature including an 'args' parameter even though it isn't
-    a named parameter, because the goal here is to explicitly show which values
-    are being passed to which parameters. This does mean that the printed 
-    string won't be executable code in this case, but that shouldn't be
-    necessary anyway since it would contain the same call that was just used.
+def debug(func=None, prefix='', arguments=True):
+    """Decorator that prints information about a function call. Often, this
+    will only be used temporarily when debugging. Note that a wrapped function
+    that accepts *args will display a signature including an 'args' parameter
+    even though it isn't a named parameter, because the goal here is to
+    explicitly show which values are being passed to which parameters. This
+    does mean that the printed string won't be executable code in this case,
+    but that shouldn't be necessary anyway since it would contain the same call
+    that just occurred.
+
+    The decorator can be used with or without arguments.
 
     Parameters
     ----------
     func: function
         Function being decorated.
-    
+    prefix: str
+        A short string to prepend the printed message with. Ex: '>>>'
+    arguments: bool
+        If True, the printed message will include the function arguments.
+        If False, it will print the function name but not its arguments.
+
     Examples
     --------
-    Occasionally, you might pass arguments to different parameters than you 
+    Occasionally, you might pass arguments to different parameters than you
     intended. Throwing a debug_call decorator on the function helps you check
     that the arguments are matching up as expected. For example, the parameter
     names in the function below have an unexpected order, so you could easily
     make the following call and expect to get 8. The debug decorator helps
     catch that the third argument is being passed in as the x parameter.
 
-    @debug_call
+    @debug
     def f(a, b, x=0, y=None, z=4, c=2):
         return a + b + c
 
     >>> f(3, 4, 1)
-    f(a=3, b=4, x=1, y=None, z=4, c=9)
+    CALLING f(a=3, b=4, x=1, y=None, z=4, c=2)
+    9
+
+    @debug(prefix='***', arguments=False)
+    def f(a, b, x=0, y=None, z=4, c=2):
+        return a + b + c
+
+    >>> f(3, 4, 1)
+    *** CALLING f()
     9
     """
+    if not func:
+        if prefix: prefix += ' '
+        return partial(debug, prefix=prefix, arguments=arguments)
+
     @wraps(func)
     def wrapper(*args, **kwargs):
-        sig = inspect.signature(wrapper).bind_partial(*args, **kwargs)
-        sig.apply_defaults()
-        sig.arguments.update(sig.arguments.pop('kwargs', {}))
-        arg_strs = (f'{k}={repr(v)}' for k, v in sig.arguments.items())
-        print(f'{wrapper.__name__}({", ".join(arg_strs)})')
+        out_fmt = '\n{}CALLING {}({})'
+        arg_strs = ''
+        if arguments:
+            sig = inspect.signature(wrapper).bind_partial(*args, **kwargs)
+            sig.apply_defaults()
+            sig.arguments.update(sig.arguments.pop('kwargs', {}))
+            arg_strs = (f'{k}={repr(v)}' for k, v in sig.arguments.items())
+
+        # Print call message and return output.
+        print(out_fmt.format(prefix, func.__qualname__, ', '.join(arg_strs)))
         return func(*args, **kwargs)
+
     return wrapper
 
 
