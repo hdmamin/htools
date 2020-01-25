@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
+from copy import copy, deepcopy
 from email.mime.text import MIMEText
 from functools import wraps, partial
 import inspect
@@ -89,6 +90,140 @@ class AutoInit:
         """
         fstrs = (f'{k}={repr(getattr(self, k))}' for k in self._init_keys)            
         return f'{self.__class__.__name__}({", ".join(fstrs)})'
+
+
+def chain(func):
+    """Decorator to register a method as chainable within a
+    LazyChainable class.
+    """
+    func._is_chainable = True
+
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapped
+
+
+class LazyChainMeta(type):
+    """Metaclass to create LazyChainable objects."""
+
+    def __new__(cls, name, bases, methods):
+        new_methods = {}
+
+        # Find chainable staticmethods and create public versions.
+        for k, v in methods.items():
+            try:
+                func = v.__get__(1)
+                assert func._is_chainable
+            except:
+                continue
+            public_name = k.lstrip('_')
+
+            # Get args and kwargs passed to staticmethod (except for instance).
+            sig = inspect.signature(func)
+            sig = sig.replace(parameters=list(sig.parameters.values())[1:])
+
+            # Must use default args so they are evaluated within loop.
+            def make_public_method(func=func, private_name=k,
+                                   public_name=public_name, sig=sig):
+                def public(inst, *args, **kwargs):
+                    bound = sig.bind(*args, **kwargs).arguments
+                    new_method = partial(getattr(inst, private_name), **bound)
+                    inst.ops.append(new_method)
+                    return inst
+
+                public.__name__ = public_name
+                return public
+
+            new_methods[public_name] = make_public_method()
+
+        return type.__new__(cls, name, bases, {**methods, **new_methods})
+
+
+class LazyChainable(metaclass=LazyChainMeta):
+    """Base class that allows children to lazily chain methods,
+    similar to a Spark RDD.
+
+    Chainable methods must be decorated with @staticmethod
+    and @chain and be named with a leading underscore. A public
+    method without the leading underscore will be created, so don't
+    overwrite this with another method. Chainable methods
+    accept an instance of the same class as the first argument,
+    process the instance in some way, then return it. A chain of
+    commands will be stored until the exec() method is called.
+    It can operate either in place or not.
+
+    Examples
+    --------
+    class Sequence(LazyChainable):
+
+        def __init__(self, numbers, counter, new=True):
+            super().__init__()
+            self.numbers = numbers
+            self.counter = counter
+            self.new = new
+
+        @staticmethod
+        @chain
+        def _sub(instance, n):
+            instance.counter -= n
+            return instance
+
+        @staticmethod
+        @chain
+        def _gt(instance, n=0):
+            instance.numbers = list(filter(lambda x: x > n, instance.numbers))
+            return instance
+
+        @staticmethod
+        @chain
+        def _call(instance):
+            instance.new = False
+            return instance
+
+        def __repr__(self):
+            pre, suf = super().__repr__().split('(')
+            argstrs = (f'{k}={repr(v)}' for k, v in vars(self).items())
+            return f'{pre}({", ".join(argstrs)}, {suf}'
+
+
+    >>> seq = Sequence([3, -1, 5], 0)
+    >>> output = seq.sub(n=3).gt(0).call().exec()
+    >>> output
+
+    Sequence(ops=[], numbers=[3, 5], counter=-3, new=False)
+
+    >>> seq   # Unchanged because exec was not in place.
+
+    Sequence(ops=[], numbers=[3, -1, 5], counter=0, new=True)
+
+
+    >>> output = seq.sub(n=3).gt(-1).call().exec(inplace=True)
+    >>> output   # None because exec was in place.
+    >>> seq   # Changed
+
+    Sequence(ops=[], numbers=[3, -1, 5], counter=-3, new=False)
+    """
+
+    def __init__(self):
+        self.ops = []
+
+    def exec(self, inplace=False):
+        new = deepcopy(self)
+        for func in self.ops:
+            new = func(copy(new))
+        # Clear ops list now that chain is complete.
+        new.ops.clear()
+        if inplace:
+            self.__dict__ = new.__dict__
+        else:
+            self.ops.clear()
+            return new
+
+    def __repr__(self):
+        argstrs = (f'{k}={repr(v)}' for k, v in vars(self).items())
+        return f'{type(self).__name__}({", ".join(argstrs)})'
 
 
 @contextmanager
