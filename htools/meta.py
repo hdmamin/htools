@@ -92,7 +92,106 @@ class AutoInit:
         return f'{self.__class__.__name__}({", ".join(fstrs)})'
 
 
+def auto_repr(cls):
+    """Class decorator that provides __repr__ method automatically
+    based on __init__ parameters. This aims to provide a simpler alternative
+    to AutoInit that does not require access to the arguments passed to
+    __init__. Attributes will only be included in the repr if they are in
+    the class dict and appear in __init__ as a named parameter (with the
+    same name).
+
+    Examples
+    --------
+    @auto_repr
+    class Foo:
+        def __init__(self, a, b=6, c=None, p=0.5, **kwargs):
+            self.a = a
+            self.b = b
+            # Different name to demonstrate that cat is not included in repr.
+            self.cat = c
+            # Property is not stored in class dict, not included in repr.
+            self.p = p
+
+        @property
+        def p(self):
+            return self._p
+
+        @p.setter
+        def p(self, val):
+            if val > 0:
+                self._p = val
+            else:
+                raise ValueError('p must be non-negative')
+
+    >>> f = Foo(3, b='b', c='c')
+    >>> f
+
+    Foo(a=3, b='b')
+    """
+
+    def repr_(instance):
+        args = dict(inspect.signature(instance.__init__).parameters)
+        arg_strs = (f'{k}={repr(v)}' for k, v in instance.__dict__.items()
+                    if k in args.keys())
+        return f'{type(instance).__name__}({", ".join(arg_strs)})'
+
+    cls.__repr__ = repr_
+    return cls
+
+
 def chain(func):
+    """Decorator for methods in classes that want to implement
+    eager chaining. Chainable methods should be instance methods
+    that return self. All this decorator does is ensure these
+    methods are called on a deep copy of the instance instead
+    of on the instance itself, so that operations are not done
+    in place.
+
+    Examples
+    --------
+    @auto_repr
+    class EagerChainable:
+
+        def __init__(self, arr, b=3):
+            self.arr = arr
+            self.b = b
+
+        @chain
+        def double(self):
+            self.b *= 2
+            return self
+
+        @chain
+        def add(self, n):
+            self.arr = [x+n for x in self.arr]
+            return self
+
+        @chain
+        def append(self, n):
+            self.arr.append(n)
+            return self
+
+    >>> ec = EagerChainable([1, 3, 5, -22], b=17)
+    >>> ec
+
+    EagerChainable(arr=[1, 3, 5, -22], b=17)
+
+    >>> ec2 = ec.append(99).double().add(400)
+    >>> ec2
+
+    EagerChainable(arr=[401, 403, 405, 378, 499], b=34)
+
+    >>> ec   # Remains unchanged.
+    EagerChainable(arr=[1, 3, 5, -22], b=17)
+    """
+
+    @wraps(func)
+    def wrapper(instance, *args, **kwargs):
+        return func(deepcopy(instance), *args, **kwargs)
+    return wrapper
+
+
+def lazychain(func):
     """Decorator to register a method as chainable within a
     LazyChainable class.
     """
@@ -165,19 +264,19 @@ class LazyChainable(metaclass=LazyChainMeta):
             self.new = new
 
         @staticmethod
-        @chain
+        @lazychain
         def _sub(instance, n):
             instance.counter -= n
             return instance
 
         @staticmethod
-        @chain
+        @lazychain
         def _gt(instance, n=0):
             instance.numbers = list(filter(lambda x: x > n, instance.numbers))
             return instance
 
         @staticmethod
-        @chain
+        @lazychain
         def _call(instance):
             instance.new = False
             return instance

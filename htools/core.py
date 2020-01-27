@@ -530,16 +530,18 @@ def catch(func, *args, verbose=False):
         return
 
 
-def robust_comp(func, gen):
-    """List comprehension with error handling. Note that values of None will be
-    removed from the resulting list.
+def safe_map(func, seq):
+    """This addresses the issue of error handling in map() or list
+    comprehension operations by simply skipping any items that throw an error.
+    Note that values of None will be removed from the resulting list.
 
     Parameters
     ----------
     func: function
-        Function to apply to each 
-    gen: generator
-        The sequence to iterate over. This could also be a list, set, etc.
+        Function to apply to each item in seq.
+    seq: generator, iterator
+        The sequence to iterate over. This could also be a generator, list,
+        set, etc.
 
     Returns
     -------
@@ -547,12 +549,13 @@ def robust_comp(func, gen):
 
     Examples
     --------
-    # Notice that 
-    >>> robust_comp(lambda x: x/(x-2), range(4))
+    # Notice that instead of throwing an error when dividing by zero, that
+    # entry was simply dropped.
+    >>> safe_map(lambda x: x/(x-2), range(4))
     [-0.0, -1.0, 3.0]
     """
     return list(
-        filter(lambda x: x is not None, (catch(func, obj) for obj in gen))
+        filter(lambda x: x is not None, (catch(func, obj) for obj in seq))
     )
 
 
