@@ -1,5 +1,5 @@
 from bz2 import BZ2File
-from collections import namedtuple
+from collections import namedtuple, UserDict
 from email.mime.text import MIMEText
 from itertools import chain
 import json
@@ -62,7 +62,7 @@ class InvalidArgumentError(Exception):
     pass
 
 
-class LambdaDict(dict):
+class LambdaDict(UserDict):
     """Create a default dict where the default function can accept parameters.
     Whereas the defaultdict in Collections can set the default as int or list,
     here we can pass in any function where the key is the parameter.
@@ -350,9 +350,10 @@ def save(obj, path, verbose=True):
     Parameters
     -----------
     obj: any
-        Object to pickle.
+        Object to save. This will be pickled/jsonified/zipped inside the
+        function - do not convert it before-hand.
     path: str
-        File name to save pickled object to. Should end with .pkl, .zip, or 
+        File name to save object to. Should end with .pkl, .zip, or
         .json depending on desired output format. If .zip is used, object will
         be zipped and then pickled.
     verbose: bool
