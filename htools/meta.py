@@ -4,6 +4,7 @@ from copy import copy, deepcopy
 from email.mime.text import MIMEText
 from functools import wraps, partial
 import inspect
+import logging
 import signal
 import sys
 import time
@@ -137,6 +138,64 @@ def auto_repr(cls):
 
     cls.__repr__ = repr_
     return cls
+
+
+class LoggerMixin:
+    """Mixin class that configures and returns a logger.
+
+    Examples
+    --------
+    class Foo(LoggerMixin):
+
+        def __init__(self, a, log_file):
+            self.a = a
+            self.log_file = log_file
+            self.logger = self.get_logger(log_file)
+
+        def walk(self, location):
+            self.logger.info(f'walk received argument {location}')
+            return f'walking to {location}'
+    """
+
+    def get_logger(self, fname=None, fmode='a', level='info',
+                   fmt='%(asctime)s [%(levelname)s]: %(message)s'):
+        """
+        Parameters
+        ----------
+        fname: str or None
+            If provided, this will be the path the logger writes to.
+            If left as None, logging will only be to stdout.
+        fmode: str
+            Logging mode when using a log file. Default 'a' for
+            'append'. 'w' will overwrite the previously logged messages.
+        level: str
+            Minimum level necessary to log messages.
+            One of ('debug', 'info', 'warning', 'error')
+        fmt: str
+            Format that will be used for logging messages. The logging
+            module has a specific
+
+        Returns
+        -------
+        logging.logger
+        """
+        # When working in Jupyter, need to reset handlers.
+        # Otherwise every time we run a cell creating an
+        # instance of the logged class, the list of handlers will grow.
+        logger = logging.getLogger(type(self).__name__)
+        logger.handlers.clear()
+        logger.setLevel(getattr(logging, level.upper()))
+
+        # handler.basicConfig() doesn't work in Jupyter..
+        formatter = logging.Formatter(fmt)
+        handlers = [logging.StreamHandler(sys.stdout)]
+        if fname:
+            handlers.append(logging.FileHandler(fname, fmode))
+        for handler in handlers:
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
+        return logger
 
 
 def chain(func):
