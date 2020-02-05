@@ -10,6 +10,8 @@ import sys
 import time
 import warnings
 
+from htools import hdir
+
 
 class AutoInit:
     """Mixin class where child class has a long list of init arguments where 
@@ -902,12 +904,67 @@ def debug(func=None, prefix='', arguments=True):
             sig = inspect.signature(wrapper).bind_partial(*args, **kwargs)
             sig.apply_defaults()
             sig.arguments.update(sig.arguments.pop('kwargs', {}))
+            # Remove self/cls arg from methods.
+            first_key = next(iter(sig.arguments))
+            if first_key in ('self', 'cls'):
+                del sig.arguments[first_key]
             arg_strs = (f'{k}={repr(v)}' for k, v in sig.arguments.items())
 
         # Print call message and return output.
         print(out_fmt.format(prefix, func.__qualname__, ', '.join(arg_strs)))
         return func(*args, **kwargs)
 
+    return wrapper
+
+
+def wrapmethods(*decorators, magics=False, internals=False):
+    """Class wrapper that applies 1 or more decorators to every non-magic
+    method. For example, we often want @debug to be applied to many different
+    methods.
+
+    Parameters
+    ----------
+    decorators: callable
+        1 or more decorators to apply to methods within a class. By default,
+        methods with 1 or 2 leading underscores are excluded.
+    magics: bool
+        If True, apply decorators to methods named with leading double 
+        underscores.
+    internals: bool
+        If True, apply decorators to methods named with leading single 
+        underscores.
+
+    Examples
+    --------
+    @wrapmethods(typecheck, debug)
+    class Foo:
+        def __init__(self, a, b=6):
+            self.a = a
+            self.b = b
+        
+        def walk(self, c:str, d=0, e:bool=True):
+            # This method will enforce type-checking and a message will be
+            # printed to stdout when it is called.
+
+        def run(self, y, z:str):
+            # This method will also have type-checking and debug messages.
+
+        def _jump(self, n:int):
+            # This method will not enforce annotations or print debug messages
+            # because the leading underscore indicates that it is an internal
+            # method. If we did want it to be decorated, we would pass
+            # `internals=True` into the `wrapmethods` decorator call as keyword
+            # arguments.
+    """
+    def wrapper(cls):
+        for attr, is_method in hdir(cls, magics, internals).items():
+            if not is_method:
+                continue
+            wrapped = getattr(cls, attr)
+            for d in decorators:
+                wrapped = d(wrapped)
+                setattr(cls, attr, wrapped)
+        return cls
     return wrapper
 
 

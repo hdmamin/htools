@@ -5,7 +5,7 @@ with open('requirements.txt', 'r') as f:
     requirements = [line.strip() for line in f]
 
 setup(name='htools',
-      version='2.0.8',
+      version='2.0.9',
       description='Harrison\'s custom functions.',
       packages=find_packages(include=['htools']),
       author='Harrison Mamin',
