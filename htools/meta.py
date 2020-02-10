@@ -5,6 +5,7 @@ from email.mime.text import MIMEText
 from functools import wraps, partial
 import inspect
 import logging
+import os
 import signal
 import sys
 import time
@@ -159,12 +160,12 @@ class LoggerMixin:
             return f'walking to {location}'
     """
 
-    def get_logger(self, fname=None, fmode='a', level='info',
+    def get_logger(self, path=None, fmode='a', level='info',
                    fmt='%(asctime)s [%(levelname)s]: %(message)s'):
         """
         Parameters
         ----------
-        fname: str or None
+        path: str or None
             If provided, this will be the path the logger writes to.
             If left as None, logging will only be to stdout.
         fmode: str
@@ -188,11 +189,12 @@ class LoggerMixin:
         logger.handlers.clear()
         logger.setLevel(getattr(logging, level.upper()))
 
-        # handler.basicConfig() doesn't work in Jupyter..
+        # handler.basicConfig() doesn't work in Jupyter.
         formatter = logging.Formatter(fmt)
         handlers = [logging.StreamHandler(sys.stdout)]
-        if fname:
-            handlers.append(logging.FileHandler(fname, fmode))
+        if path:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            handlers.append(logging.FileHandler(path, fmode))
         for handler in handlers:
             handler.setFormatter(formatter)
             logger.addHandler(handler)
@@ -245,7 +247,6 @@ def chain(func):
     >>> ec   # Remains unchanged.
     EagerChainable(arr=[1, 3, 5, -22], b=17)
     """
-
     @wraps(func)
     def wrapper(instance, *args, **kwargs):
         return func(deepcopy(instance), *args, **kwargs)
