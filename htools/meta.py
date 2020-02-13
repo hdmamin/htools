@@ -846,6 +846,53 @@ def typecheck(func_=None, **types):
     return wrapper
 
 
+def valuecheck(func):
+    """Decorator that checks if user-specified arguments are acceptable.
+    Because this re-purposes annotations to specify values rather than types,
+    this can NOT be used together with the @typecheck decorator. Keep in mind
+    that this tests for equality, so 4 and 4.0 are considered equivalent.
+
+    Parameters
+    ----------
+    func: function
+        The function to decorate. Use annotations to specify acceptable values
+        as tuples, as shown below.
+
+    Examples
+    --------
+    @valuecheck
+    def foo(a, b:('min', 'max'), c=6, d:(True, False)=True):
+        return d, c, b, a
+
+    >>> foo(3, 'min')
+    (True, 6, 'min', 3)
+
+    >>> foo(True, 'max', d=None)
+    ValueError: Invalid argument for parameter d. Value must be in
+    (True, False).
+
+    >>> foo('a', 'mean')
+    ValueError: Invalid argument for parameter b. Value must be in
+    ('min', 'max').
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        sig = inspect.signature(func)
+        annos = {k: v.annotation for k, v in sig.parameters.items()}
+        bound = sig.bind(*args, **kwargs)
+        bound.apply_defaults()
+        for k, v in bound.arguments.items():
+            choices = annos[k]
+            if choices == inspect._empty: continue
+            if v not in choices:
+                raise ValueError(f'Invalid argument for parameter {k}. '
+                                 f'Value must be in {choices}.')
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def debug(func=None, prefix='', arguments=True):
     """Decorator that prints information about a function call. Often, this
     will only be used temporarily when debugging. Note that a wrapped function
