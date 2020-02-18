@@ -1,6 +1,7 @@
 from bz2 import BZ2File
 from collections import namedtuple, UserDict
 from email.mime.text import MIMEText
+import inspect
 from itertools import chain
 import json
 import os
@@ -147,6 +148,32 @@ def tdir(obj, **kwargs):
     """
     return {k: type(getattr(obj, k)) 
             for k, v in hdir(obj, **kwargs).items() if v == 'attribute'}
+
+
+def hasarg(func, arg):
+    """Checks if a function has a given argument.
+    Works with args and kwargs as well if you exclude the
+    stars. See example below.
+    Parameters
+    ----------
+    func: function
+    arg: str
+        Name of argument to look for.
+    Returns
+    -------
+    bool
+    Example
+    -------
+    def foo(a, b=6, *args):
+        return
+    >>> hasarg(foo, 'b')
+    True
+    >>> hasarg(foo, 'args')
+    True
+    >>> hasarg(foo, 'c')
+    False
+    """
+    return arg in inspect.signature(func).parameters
 
 
 def quickmail(subject, message, to_email, from_email=None):
