@@ -1016,6 +1016,25 @@ def wrapmethods(*decorators, magics=False, internals=False):
     return wrapper
 
 
+def add_docstring(func):
+    """Add the docstring from another function/class to the decorated
+    function/class.
+
+    Examples
+    --------
+    @add_docstring(nn.Conv2d)
+    class ReflectionPaddedConv2d(nn.Module):
+        ...
+    """
+    def decorator(new_func):
+        new_func.__doc__ = f'{new_func.__doc__}\n\n{func.__doc__}'
+        @wraps(new_func)
+        def wrapper(*args, **kwargs):
+            return new_func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def timer(func):
     """Provide conservative time estimate for a function to run. Behavior may
     not be interpretable for recursive functions.
