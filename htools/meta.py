@@ -10,6 +10,7 @@ import signal
 import sys
 import time
 import warnings
+from weakref import WeakSet
 
 from htools import hdir
 
@@ -575,7 +576,7 @@ class ReadOnly:
     Examples
     --------
     class Dog:
-        breed = ReadOnly('breed')
+        breed = ReadOnly()
         def __init__(self, breed, age):
             # Once breed is set in the line below, it cannot be changed.
             self.breed = breed
@@ -595,9 +596,12 @@ class ReadOnly:
     PermissionError: Attribute is read-only.
     """
 
-    def __init__(self, name):
+    def __init__(self):
+        self.name = None
+        self.initialized = WeakSet()
+
+    def __set_name__(self, owner, name):
         self.name = name
-        self.initialized = set()
 
     def __get__(self, instance, cls):
         if instance is None:
