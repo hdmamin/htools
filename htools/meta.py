@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
 from email.mime.text import MIMEText
 from functools import wraps, partial
 import inspect
 import logging
 import os
+from pathlib import Path
 import signal
 import sys
 import time
@@ -965,6 +966,49 @@ def debug(func=None, prefix='', arguments=True):
         # Print call message and return output.
         print(out_fmt.format(prefix, func.__qualname__, ', '.join(arg_strs)))
         return func(*args, **kwargs)
+
+    return wrapper
+
+
+def log_stdout(func=None, fname=''):
+    """Decorator that logs all stdout produced by a function.
+
+    Parameters
+    ----------
+    func: function
+        If the decorator is used without parenthesis, the function will be
+        passed in as the first argument. You never need to explicitly specify
+        a function.
+    fname: str
+        Path to log file which will be created. If None is specified, the
+        default is to write to ./logs/wrapped_func_name.log. If specified,
+        this must be a keyword argument.
+
+    Examples
+    --------
+    @log_stdout
+    def foo(a, b=3):
+        print(a)
+        a *= b
+        print(a)
+        return a**b
+
+    @log_stdout(fname='../data/mylog.log')
+    def foo(a, b=3):
+        ...
+    """
+    if not func:
+        return partial(log_stdout, fname=Path(fname))
+    if not fname:
+        fname = Path(f'./logs/{func.__name__}.log')
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        os.makedirs(fname.parent, exist_ok=True)
+        with open(fname, 'w') as f:
+            with redirect_stdout(f):
+                out = func(*args, **kwargs)
+        return out
 
     return wrapper
 
