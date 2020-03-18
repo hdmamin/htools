@@ -1064,6 +1064,57 @@ def wrapmethods(*decorators, magics=False, internals=False):
     return wrapper
 
 
+def delegate(attr):
+    """Decorator that automatically delegates attribute calls to an attribute
+    of the class. This is a nice convenience to have when using composition.
+    This does NOT affect magic methods; for that, see the `forwardable`
+    library.
+
+    Note: I suspect this could lead to some unexpected behavior so be careful
+    using this in production.
+
+    Parameters
+    ----------
+    attr: str
+        Name of variable to delegate to.
+
+    Examples
+    --------
+    Example 1: We can use BeautifulSoup methods like `find_all` directly on
+    the Page object. Most IDEs should let us view quick documentation as well.
+
+    @delegate('soup')
+    class Page:
+        def __init__(self, url, logfile, timeout):
+            self.soup = self.fetch(url, timeout=timeout)
+        ...
+
+    page = Page('http://www.coursera.org')
+    page.find_all('div')
+
+    Example 2: Magic methods are not delegated.
+
+    @delegate('data')
+    class Foo:
+        def __init__(self, data, city):
+            self.data = data
+            self.city = city
+
+    >>> f = Foo(['a', 'b', 'c'], 'San Francisco')
+    >>> len(f)
+
+    TypeError: object of type 'Foo' has no len()
+    """
+    def wrapper(cls):
+        def f(self, new_attr):
+            delegate = getattr(self, attr)
+            return getattr(delegate, new_attr)
+        cls.__getattr__ = f
+        return cls
+
+    return wrapper
+
+
 def add_docstring(func):
     """Add the docstring from another function/class to the decorated
     function/class.
