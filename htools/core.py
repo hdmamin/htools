@@ -5,6 +5,7 @@ import inspect
 from itertools import chain
 import json
 import os
+from pathlib import Path
 import pickle
 import re
 import smtplib
@@ -391,11 +392,15 @@ def save(obj, path, verbose=True):
     -------
     None
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    opener, mode, saver = _read_write_args(path, 'w')
-    with opener(path, mode) as f:
-        saver.dump(obj, f)
-    if verbose: print(f'Data written to {path}.')
+    path = Path(path)
+    os.makedirs(path.parent, exist_ok=True)
+    if verbose: print(f'Writing data to {path}.')
+    if path.suffix == '.txt':
+        path.write_text(obj)
+    else:
+        opener, mode, saver = _read_write_args(str(path), 'w')
+        with opener(path, mode) as f:
+            saver.dump(obj, f)
 
 
 def load(path, verbose=True):
@@ -412,7 +417,11 @@ def load(path, verbose=True):
     -------
     object: The Python object that was pickled to the specified file.
     """
-    opener, mode, saver = _read_write_args(path, 'r')
+    path = Path(path)
+    if path.suffix == '.txt':
+        return path.read_text()
+
+    opener, mode, saver = _read_write_args(str(path), 'r')
     with opener(path, mode) as f:
         data = saver.load(f)
     if verbose: print(f'Object loaded from {path}.')
