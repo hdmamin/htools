@@ -1,7 +1,7 @@
 from bz2 import BZ2File
 from collections import namedtuple, UserDict, Sequence, Mapping
 from email.mime.text import MIMEText
-from fuzzywuzzy import fuzz, process
+from rapidfuzz import fuzz, process
 import inspect
 from itertools import chain
 import json
