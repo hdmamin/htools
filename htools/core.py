@@ -1,5 +1,5 @@
 from bz2 import BZ2File
-from collections import namedtuple, UserDict
+from collections import namedtuple, UserDict, Sequence, Mapping
 from email.mime.text import MIMEText
 from fuzzywuzzy import fuzz, process
 import inspect
@@ -529,6 +529,82 @@ def dict_sum(*args):
     keys = {key for d in args for key in d.keys()}
     return {key: sum(d.get(key, 0) for d in args)
             for key in keys}
+
+
+def _select_mapping(items, keep=(), drop=()):
+    """Helper function for `select`.
+
+    Parameters
+    ----------
+    items: Mapping
+        Dict (or similar mapping) to select/drop from.
+    keep: Iterable[str]
+        Sequence of keys to keep.
+    drop: Iterable[str]
+        Sequence of keys to drop. You should specify either `keep` or `drop`,
+        not both.
+
+    Returns
+    -------
+    Dict
+    """
+    if keep:
+        return {k: items[k] for k in keep}
+    return {k: v for k, v in items.items() if k not in set(drop)}
+
+
+def _select_sequence(items, keep=(), drop=()):
+    """Helper function for `select` that works on sequences (basically
+    collections that support enumeration).
+
+    Parameters
+    ----------
+    items: Sequence
+        List, tuple, or iterable sequence of some sort to select items from.
+    keep: Iterable[str]
+        Sequence of indices to keep.
+    drop: Iterable[str]
+        Sequence of indices to drop. You should specify either `keep` or
+        `drop`, not both.
+
+    Returns
+    -------
+    Same type as `items` (usually a list or tuple).
+    """
+    type_ = type(items)
+    if keep:
+        return type_(x for i, x in enumerate(items) if i in set(keep))
+    return type_(x for i, x in enumerate(items) if i not in set(drop))
+
+
+def select(items, keep=(), drop=()):
+    """
+
+    Parameters
+    ----------
+    items: abc.Sequence or abc.Mapping
+        The dictionary to select items from.
+    keep: Iterable[str]
+        Sequence of keys to keep.
+    drop: Iterable[str]
+        Sequence of keys to drop. You should specify either `keep` or `drop`,
+        not both.
+
+    Returns
+    -------
+    dict: Dictionary containing only the specified keys (when passing in
+        `keep`), or all keys except the specified ones (when passing in
+        `drop`).
+    """
+    if bool(keep) + bool(drop) != 1:
+        raise InvalidArgumentError('Specify exactly one of `keep` or `drop`.')
+
+    if isinstance(items, Mapping):
+        pass
+    elif isinstance(items, Sequence):
+        return _select_sequence(items, keep, drop)
+    else:
+        raise InvalidArgumentError('`items` must be a Mapping or Sequence.')
 
 
 def differences(obj1, obj2, methods=False, **kwargs):
