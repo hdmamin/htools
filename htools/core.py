@@ -578,7 +578,9 @@ def _select_sequence(items, keep=(), drop=()):
 
 
 def select(items, keep=(), drop=()):
-    """
+    """Select a subset of a data structure. When used on a mapping (e.g. dict),
+    you can specify a list of keys to include or exclude. When used on a
+    sequence like a list or tuple, specify indices instead of keys.
 
     Parameters
     ----------
@@ -600,7 +602,7 @@ def select(items, keep=(), drop=()):
         raise InvalidArgumentError('Specify exactly one of `keep` or `drop`.')
 
     if isinstance(items, Mapping):
-        pass
+        return _select_mapping(items, keep, drop)
     elif isinstance(items, Sequence):
         return _select_sequence(items, keep, drop)
     else:
