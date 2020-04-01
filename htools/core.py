@@ -1,5 +1,5 @@
 from bz2 import BZ2File
-from collections import namedtuple, UserDict, Sequence, Mapping
+from collections import namedtuple, UserDict, Sequence, Iterable, Mapping
 from email.mime.text import MIMEText
 from fuzzywuzzy import fuzz, process
 import inspect
@@ -95,14 +95,23 @@ class FuzzyKeyDict(dict):
     1
     """
 
-    def __init__(self, limit=3):
+    def __init__(self, data=None, limit=3):
         """
         Parameters
         ----------
+        data: Iterable (optional)
+            Sequence of pairs, such as a dictionary or a list of tuples. If
+            provided, this will be used to populate the FuzzyKeyDict.
         limit: int
             Number of similar keys to find when trying to retrieve the value
             for a missing key.
         """
+        if isinstance(data, Mapping):
+            for k, v in data.items():
+                self[k] = v
+        elif isinstance(data, Iterable):
+            for k, v in data:
+                self[k] = v
         self.limit = limit
 
     def __getitem__(self, key):
@@ -127,71 +136,6 @@ class FuzzyKeyDict(dict):
         if return_distances:
             return pairs
         return [p[0] for p in pairs]
-
-
-class FuzzyKeyDict(dict):
-    """Dictionary that tries to find similar keys if a key is missing and
-    returns their corresponding values. This could be useful as a word2index
-    mapping when working with embeddings: we could try mapping missing words to
-    a combination of existing words.
-
-    Examples
-    --------
-    d = FuzzyKeyDict(limit=3, verbose=True)
-    d['dog'] = 0
-    d['cat'] = 1
-    d['alley cat'] = 2
-    d['pig'] = 3
-    d['cow'] = 4
-    d['cowbell'] = 5
-    d['baby cow'] = 6
-
-    # Keys and similarity scores are displayed because we're in verbose mode.
-    >>> res = d['house cat']
-    [('alley cat', 56), ('cat', 50), ('cowbell', 25)]
-
-    # Values correspond to d['alley cat'], d['cat'], d['cowbell'].
-    >>> res
-    [2, 1, 5]
-
-    # "cat" is in our dict so no similarity scores are printed and output is
-    # an integer, not a list.
-    >>> d['cat']
-    1
-    """
-
-    def __init__(self, limit=3, verbose=False):
-        """
-        Parameters
-        ----------
-        limit: int
-            Number of similar keys to find when trying to retrieve the value
-            for a missing key.
-        verbose: bool
-            If True, this will print the similar keys and their similarity to
-            the queried key when trying to retrieve a missing key.
-        """
-        self.limit = limit
-        self.verbose = verbose
-
-    def __getitem__(self, key):
-        """
-        Returns
-        -------
-        any or list[any]: If key is present in dict, the corresponding value
-            is returned. If not, the n closest keys are identified and their
-            corresponding values are returned in a list (where n is defined
-            by the `limit` argument specified in the constructor). Values are
-            sorted in descending order by the neighboring keys' similarity to
-            the missing key in.
-        """
-        try:
-            return super().__getitem__(key)
-        except KeyError:
-            res = process.extract(key, self.keys(), limit=self.limit,
-                                  scorer=fuzz.ratio)
-            if self.verbose: print(res)
-            return [self[k] for k, v in res]
 
 
 class LambdaDict(UserDict):
