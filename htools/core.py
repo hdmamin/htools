@@ -773,7 +773,47 @@ def flatten(nested):
     return list(_walk(nested))
 
 
-def chain_funcs(x, *funcs, verbose=False, attr=''):
+class BasicPipeline:
+    """Create a simple unidirectional pipeline of functions to apply in order
+    with optional debugging output.
+    """
+
+    def  __init__(self, *funcs):
+        """
+        Parameters
+        ----------
+        *funcs: function(s)
+            One or more functions to apply in the specified order.
+        """
+        self.funcs = funcs
+
+    def __call__(self, x, verbose=False, attr=''):
+        """Apply the pipeline of functions to x.
+
+        Parameters
+        ----------
+        x: any
+            Object to operate on.
+        verbose: bool
+            If True, print x (or an attribute of x) after each step.
+        attr: str
+            If specified and verbose is True, will print this attribute of x
+            after each function is applied.
+
+        Returns
+        -------
+        output of last func in self.funcs
+        """
+        for func in self.funcs:
+            x = func(x)
+            if verbose: print(repr(getattr(x, attr, x)))
+        return x
+
+    def __repr__(self):
+        return f'BasicPipeline({", ".join(f.__name__ for f in self.funcs)})'
+
+
+def pipe(x, *funcs, verbose=False, attr=''):
     """Convenience function to apply many functions in order to some object.
     This lets us replace messy notation where it's hard to keep parenthesis
     straight:
@@ -783,12 +823,12 @@ def chain_funcs(x, *funcs, verbose=False, attr=''):
 
     with:
 
-    chain_funcs(text, strip_html_tags, porter_stem, tokenize_rows,
-                parse_processed_text, list)
+    pipe(text, strip_html_tags, porter_stem, tokenize_rows,
+         parse_processed_text, list)
 
     or if we have a list  of functions:
 
-    chain_funcs(x, *funcs)
+    pipe(x, *funcs)
 
     Parameters
     ----------
@@ -807,10 +847,7 @@ def chain_funcs(x, *funcs, verbose=False, attr=''):
     -------
     output of last func in *funcs
     """
-    for func in funcs:
-        x = func(x)
-        if verbose: print(repr(getattr(x, attr, x)))
-    return x
+    return BasicPipeline(*funcs)(x, verbose=verbose, attr=attr)
 
 
 SENTINEL = object()
