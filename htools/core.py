@@ -773,4 +773,44 @@ def flatten(nested):
     return list(_walk(nested))
 
 
+def chain_funcs(x, *funcs, verbose=False, attr=''):
+    """Convenience function to apply many functions in order to some object.
+    This lets us replace messy notation where it's hard to keep parenthesis
+    straight:
+
+    list(parse_processed_text(tokenize_rows(porter_stem(strip_html_tags(
+         text)))))
+
+    with:
+
+    chain_funcs(text, strip_html_tags, porter_stem, tokenize_rows,
+                parse_processed_text, list)
+
+    or if we have a list  of functions:
+
+    chain_funcs(x, *funcs)
+
+    Parameters
+    ----------
+    x: any
+        Object to apply functions to.
+    *funcs: function(s)
+        Functions in the order you want to apply them. Use functools.partial
+        to specify other arguments.
+    verbose: bool
+        If True, print x (or an attribute of x) after each step.
+    attr: str
+        If specified and verbose is True, will print this attribute of x
+        after each function is applied.
+
+    Returns
+    -------
+    output of last func in *funcs
+    """
+    for func in funcs:
+        x = func(x)
+        if verbose: print(repr(getattr(x, attr, x)))
+    return x
+
+
 SENTINEL = object()
