@@ -1,5 +1,6 @@
 from bz2 import BZ2File
-from collections import namedtuple, UserDict, Sequence, Iterable, Mapping
+from collections import Counter, namedtuple, UserDict, Sequence, Iterable, \
+    Mapping
 from email.mime.text import MIMEText
 from fuzzywuzzy import fuzz, process
 import inspect
@@ -848,6 +849,30 @@ def pipe(x, *funcs, verbose=False, attr=''):
     output of last func in *funcs
     """
     return BasicPipeline(*funcs)(x, verbose=verbose, attr=attr)
+
+
+def vcounts(arr, normalize=True):
+    """Equivalent of pandas_htools vcounts method that we can apply on lists
+    or arrays. Basically just a wrapper around Counter but with optional
+    normalization.
+
+    Parameters
+    ----------
+    arr: Iterable
+        Sequence of values to count. Typically a list or numpy array.
+    normalize: bool
+        If True, counts will be converted to percentages.
+
+    Returns
+    -------
+    dict: Maps unique items in `arr` to the number of times (or % of times)
+        that they occur in `arr`.
+    """
+    counts = dict(Counter(arr))
+    if normalize:
+        length = len(arr)
+        counts = {k: v/length for k, v in counts.items()}
+    return counts
 
 
 SENTINEL = object()

@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
-from email.mime.text import MIMEText
 from functools import wraps, partial
 import inspect
 import logging
