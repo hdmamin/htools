@@ -12,7 +12,7 @@ import time
 import warnings
 from weakref import WeakSet
 
-from htools import hdir
+from htools import hdir, load, save
 
 
 class AutoInit:
@@ -201,6 +201,39 @@ class LoggerMixin:
             logger.addHandler(handler)
 
         return logger
+
+
+class SaveableMixin:
+    """Provide object saving and loading methods. If you want to be able to
+    pass a file name rather than a full path to `save`, the object can define
+    a `self.dir` attribute.
+    """
+
+    def save(self, path=None, fname=None):
+        """Pickle object with optional compression.
+
+        Parameters
+        ----------
+        path: str or Path
+            Path to save object to.
+        fname: str or Path
+            If passed in, method will use this as a filename within the
+            object's `dir` attribute.
+        """
+        assert not fname or not path, 'Can\'t pass in both fname and path.'
+        path = path or Path(self.dir) / fname
+        save(self, path)
+
+    @classmethod
+    def load(self, path):
+        """Load object from pickle file.
+
+        Parameters
+        ----------
+        path: str or Path
+            Name of file where object is stored.
+        """
+        return load(path)
 
 
 def chain(func):
