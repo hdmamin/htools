@@ -1,2 +1,4 @@
 fuzzywuzzy[speedup]
 ipython
+pandas
+pandas_flavor

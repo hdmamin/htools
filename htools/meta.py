@@ -236,13 +236,13 @@ class SaveableMixin:
         return load(path)
 
 
-def chain(func):
+def chainmethod(func):
     """Decorator for methods in classes that want to implement
     eager chaining. Chainable methods should be instance methods
-    that return self. All this decorator does is ensure these
-    methods are called on a deep copy of the instance instead
-    of on the instance itself, so that operations are not done
-    in place.
+    that change 1 or more instance attributes and return None. All this
+    decorator does is ensure these methods are called on a deep copy of the
+    instance instead of on the instance itself so that operations don't affect
+    the original object. The new object is returned.
 
     Examples
     --------
@@ -253,20 +253,17 @@ def chain(func):
             self.arr = arr
             self.b = b
 
-        @chain
+        @chainmethod
         def double(self):
             self.b *= 2
-            return self
 
-        @chain
+        @chainmethod
         def add(self, n):
             self.arr = [x+n for x in self.arr]
-            return self
 
-        @chain
+        @chainmethod
         def append(self, n):
             self.arr.append(n)
-            return self
 
     >>> ec = EagerChainable([1, 3, 5, -22], b=17)
     >>> ec
@@ -283,7 +280,9 @@ def chain(func):
     """
     @wraps(func)
     def wrapper(instance, *args, **kwargs):
-        return func(deepcopy(instance), *args, **kwargs)
+        new_inst = deepcopy(instance)
+        func(new_inst, *args, **kwargs)
+        return new_inst
     return wrapper
 
 
@@ -292,7 +291,6 @@ def lazychain(func):
     LazyChainable class.
     """
     func._is_chainable = True
-
     @wraps(func)
     def wrapped(*args, **kwargs):
         return func(*args, **kwargs)
@@ -341,7 +339,7 @@ class LazyChainable(metaclass=LazyChainMeta):
     similar to a Spark RDD.
 
     Chainable methods must be decorated with @staticmethod
-    and @chain and be named with a leading underscore. A public
+    and @chainmethod and be named with a leading underscore. A public
     method without the leading underscore will be created, so don't
     overwrite this with another method. Chainable methods
     accept an instance of the same class as the first argument,
@@ -989,10 +987,11 @@ def debug(func=None, prefix='', arguments=True):
             sig = inspect.signature(wrapper).bind_partial(*args, **kwargs)
             sig.apply_defaults()
             sig.arguments.update(sig.arguments.pop('kwargs', {}))
-            # Remove self/cls arg from methods.
-            first_key = next(iter(sig.arguments))
-            if first_key in ('self', 'cls'):
-                del sig.arguments[first_key]
+            if sig.arguments:
+                first_key = next(iter(sig.arguments))
+                # Remove self/cls arg from methods.
+                if first_key in ('self', 'cls'):
+                    del sig.arguments[first_key]
             arg_strs = (f'{k}={repr(v)}' for k, v in sig.arguments.items())
 
         # Print call message and return output.
@@ -1045,53 +1044,62 @@ def log_stdout(func=None, fname=''):
     return wrapper
 
 
-def wrapmethods(*decorators, magics=False, internals=False):
+def identity(x):
+    """Returns the input argument. Sometimes it is convenient to have this if
+    we sometimes apply a function to an item: rather than defining a None
+    variable, sometimes setting it to a function, then checking if it's None
+    every time we're about to call it, we can set the default as identity and
+    safely call it without checking.
+
+    Parameters
+    ----------
+    x: any
+
+    Returns
+    -------
+    x: Unchanged input.
+    """
+    return x
+
+
+def wrapmethods(*decorators, methods=(), internals=False):
     """Class wrapper that applies 1 or more decorators to every non-magic
-    method. For example, we often want @debug to be applied to many different
-    methods.
+    method (properties are also excluded). For example, we often want @debug
+    to be applied to many different methods.
 
     Parameters
     ----------
     decorators: callable
         1 or more decorators to apply to methods within a class. By default,
         methods with 1 or 2 leading underscores are excluded.
-    magics: bool
-        If True, apply decorators to methods named with leading double 
-        underscores.
+    methods: Iterable[str]
+        Names of methods to wrap if you don't want to wrap all of them.
+        Internal methods can be wrapped but magic methods and properties
+        cannot.
     internals: bool
-        If True, apply decorators to methods named with leading single 
-        underscores.
-
-    Examples
-    --------
-    @wrapmethods(typecheck, debug)
-    class Foo:
-        def __init__(self, a, b=6):
-            self.a = a
-            self.b = b
-        
-        def walk(self, c:str, d=0, e:bool=True):
-            # This method will enforce type-checking and a message will be
-            # printed to stdout when it is called.
-
-        def run(self, y, z:str):
-            # This method will also have type-checking and debug messages.
-
-        def _jump(self, n:int):
-            # This method will not enforce annotations or print debug messages
-            # because the leading underscore indicates that it is an internal
-            # method. If we did want it to be decorated, we would pass
-            # `internals=True` into the `wrapmethods` decorator call as keyword
-            # arguments.
+        If True, apply decorators to methods named with leading single
+        underscores. This will be ignored if `methods` is specified.
     """
+
     def wrapper(cls):
-        for attr, is_method in hdir(cls, magics, internals).items():
-            if not is_method:
+        special_methods = (staticmethod, classmethod)
+        to_wrap = dict.fromkeys(methods, True) if methods \
+            else hdir(cls, False, internals=internals)
+        for attr, is_method in to_wrap.items():
+            f = cls.__dict__[attr]
+            mtype = type(f)
+            if not is_method or isinstance(f, property):
                 continue
-            wrapped = getattr(cls, attr)
+
+            # Classmethod and staticmethod decorators need to be applied last.
+            final_wrapper = identity
+            if isinstance(f, special_methods):
+                final_wrapper = type(f)
+                f = f.__func__
+
             for d in decorators:
-                wrapped = d(wrapped)
-                setattr(cls, attr, wrapped)
+                f = d(f)
+            setattr(cls, attr, final_wrapper(f))
         return cls
     return wrapper
 

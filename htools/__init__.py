@@ -1,4 +1,5 @@
 from htools.core import *
+from htools.structures import *
 from htools.meta import *
 
-__version__ = '2.2.16'
+__version__ = '3.0.0'
