@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
-from functools import wraps, partial
+from functools import wraps, partial, update_wrapper
 import inspect
 import logging
 import os
@@ -9,6 +9,7 @@ from pathlib import Path
 import signal
 import sys
 import time
+import types
 import warnings
 from weakref import WeakSet
 
@@ -1226,3 +1227,78 @@ def block_timer():
     finally:
         duration = time.perf_counter() - start
         print(f'[TIMER]: Block executed in {duration:.3f} seconds.')
+
+
+def copy_func(func):
+    """Copy a function. Regular copy and deepcopy functionality do not work
+    on functions the way they do on most objects. If we want to create a new
+    function based on another without altering the old one (as in
+    `rename_params`), this should be used.
+
+    Parameters
+    ----------
+    func: function
+        Function to duplicate.
+
+    Returns
+    -------
+    function: Copy of input `func`.
+
+    Examples
+    --------
+    def foo(a, b=3, *args, c=5, **kwargs):
+        return a, b, c, args, kwargs
+
+    foo2 = copy_func(foo)
+
+    >>> foo2.__code__ == foo.__code__
+    True
+
+    >>> foo2 == foo
+    False
+    """
+    new_func = types.FunctionType(func.__code__, func.__globals__,
+                                  func.__name__, func.__defaults__,
+                                  func.__closure__)
+    new_func.__kwdefaults__ = func.__kwdefaults__.copy()
+    return update_wrapper(new_func, func)
+
+
+def rename_params(func, **old2new):
+    """Rename one or more parameters. Docstrings and default arguments are
+    updated accordingly. This is useful when working with code that uses
+    `hasarg`. For example, my Incendio library uses parameter names
+    to pass the correct arguments to different metrics.
+
+    Parameters
+    ----------
+    func: function
+        The old function to change.
+    old2new: str
+        One or more parameter names to change and their corresponding new
+        names. See Example below for a more concrete example.
+
+    Returns
+    -------
+    function: Same as input `func` but with updated parameter names.
+
+    Examples
+    --------
+    def foo(a, b, *args, c=3, **kwargs):
+        pass
+
+    foo_metric = rename_params(func, a=y_true, b=y_pred)
+
+    `foo_metric` will work exactly like `foo` but its first two parameters will
+    now be named "y_true" and "y_pred", respectively. """
+    new_func = copy_func(func)
+    sig = inspect.signature(new_func)
+    kw_defaults = func.__kwdefaults__
+    names, params = map(list, zip(*sig.parameters.items()))
+    for old, new in old2new.items():
+        idx = names.index(old)
+        default = kw_defaults.get(old)
+        kwargs = {'default': default} if default else {}
+        params[idx] = inspect.Parameter(new, params[idx].kind, **kwargs)
+    new_func.__signature__ = sig.replace(parameters=params)
+    return new_func
