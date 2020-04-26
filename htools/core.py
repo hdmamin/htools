@@ -732,6 +732,23 @@ def vcounts(arr, normalize=True):
     return counts
 
 
+def first(it):
+    """Get the first item from an iterable (e.g. dict, set, torch DataLoader).
+    This is a quick way to access an item for iterables that don't support
+    indexing, or do support indexing but require us to know a key.
+
+    Parameters
+    ----------
+    it: Iterable
+        Container that we want to access a value from.
+
+    Returns
+    -------
+    any: The first item in the iterable.
+    """
+    return next(iter(it))
+
+
 def cd_root(root_subdir='notebooks'):
     """Run at start of Jupyter notebook to enter project root.
     Parameters

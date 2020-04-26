@@ -1,5 +1,6 @@
 from functools import partial
 from IPython.display import display, HTML
+import matplotlib.pyplot as plt
 import operator
 import os
 import pandas as pd
@@ -514,3 +515,62 @@ def is_list_col(col):
     # Filter out nulls first otherwise type could be np.nan instead of list.
     no_nulls = col.dropna()
     return not no_nulls.empty and isinstance(no_nulls.iloc[0], list)
+
+
+@pf.register_dataframe_method
+@pf.register_series_method
+def verbose_plot(df, nrows=None, **kwargs):
+    """Plot data and also print it out as a table. For example, this is
+    nice when finding quantiles, where it's often helpful to plot them for a
+    quick visual snapshot but also to examine the table of values for more
+    details.
+
+    Parameters
+    ----------
+    nrows: int or None
+        If provided, will truncate the printed table. Otherwise all rows will
+        be shown.
+    kwargs: any
+        Arguments to pass to the plot method.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    df.bids.quantile(np.arange(0, 1, .1)).verbose_plot(kind='bar', color='red')
+    """
+    df.plot(**kwargs)
+    df.head(nrows).pprint()
+    plt.show()
+
+
+def anti_join(df_left, df_right, left_on=None, right_on=None, **kwargs):
+    """
+
+    Parameters
+    ----------
+    df_left: pd.DataFrame
+        The dataframe containing the initial rows to subtract from.
+    df_right: pd.DataFrame
+        The dataframe containing rows to "subtract" from `df_left`.
+    left_on: str or list[str]
+        Column name(s) to join on.
+    right_on: str or list[str]
+        If not provided, the default is to use the same values as `left_on`.
+    kwargs: any
+        Will be passed to the merge operation. Ex: `left_index=True`.
+
+    Returns
+    -------
+    pd.DataFrame: Contains all rows that are present in `df_left` but not in
+        `df_right`.
+    """
+    right = df_right.copy()
+    right['XX_RHS_XX'] = True
+    merged = df_left.merge(right, how='left', left_on=left_on,
+                           right_on=right_on or left_on,
+                           suffixes=['', '_rhs'], **kwargs)
+    return merged.loc[merged.XX_RHS_XX.isnull(), df_left.columns]
+

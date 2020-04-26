@@ -1088,7 +1088,6 @@ def wrapmethods(*decorators, methods=(), internals=False):
             else hdir(cls, False, internals=internals)
         for attr, is_method in to_wrap.items():
             f = cls.__dict__[attr]
-            mtype = type(f)
             if not is_method or isinstance(f, property):
                 continue
 
