@@ -305,7 +305,7 @@ def _read_write_args(path, mode):
 
 
 def save(obj, path, verbose=True):
-    """Wrapper to save data as pickle (optionally zipped) or json.
+    """Wrapper to save data as text, pickle (optionally zipped), or json.
 
     Parameters
     -----------
@@ -313,7 +313,7 @@ def save(obj, path, verbose=True):
         Object to save. This will be pickled/jsonified/zipped inside the
         function - do not convert it before-hand.
     path: str
-        File name to save object to. Should end with .pkl, .zip, or
+        File name to save object to. Should end with .txt, .pkl, .zip, or
         .json depending on desired output format. If .zip is used, object will
         be zipped and then pickled.
     verbose: bool
@@ -336,12 +336,13 @@ def save(obj, path, verbose=True):
 
 
 def load(path, verbose=True):
-    """Wrapper to load pickled (optionally zipped) or json data.
+    """Wrapper to load text files or pickled (optionally zipped) or json data.
     
     Parameters
     ----------
     path : str
-        File to load. File type will be inferred from extension.
+        File to load. File type will be inferred from extension. Must be one of
+        '.txt', '.json', '.pkl', or '.zip'.
     verbose : bool, optional
         If True, will print message stating where object was loaded from.
     
