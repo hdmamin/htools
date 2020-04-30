@@ -735,10 +735,21 @@ class Callback(ABC):
     """
 
     @abstractmethod
-    def on_begin(self, inputs, output=None):
+    def setup(self, func):
         """
         Parameters
-        -------------
+        ----------
+        func: function
+            The function being decorated.
+
+        """
+    @abstractmethod
+    def on_begin(self, func, inputs, output=None):
+        """
+        Parameters
+        ----------
+        func: function
+            The function being decorated.
         inputs: dict
             Dictionary of bound arguments passed to the function being
             decorated with @callbacks.
@@ -749,10 +760,12 @@ class Callback(ABC):
         """
 
     @abstractmethod
-    def on_end(self, inputs, output=None):
+    def on_end(self, func, inputs, output=None):
         """
         Parameters
-        -------------
+        ----------
+        func: function
+            The function being decorated.
         inputs: dict
             Dictionary of bound arguments passed to the function being
             decorated with @callbacks.
@@ -785,15 +798,17 @@ def callbacks(cbs):
         # Train model.
     """
     def decorator(func):
+        for cb in cbs:
+            cb.setup(func)
         @wraps(func)
         def wrapper(*args, **kwargs):
             bound = inspect.signature(func).bind_partial(*args, **kwargs)
             bound.apply_defaults()
             for cb in cbs:
-                cb.on_begin(bound.arguments, None)
+                cb.on_begin(func, bound.arguments, None)
             out = func(*args, **kwargs)
             for cb in cbs:
-                cb.on_end(bound.arguments, out)
+                cb.on_end(func, bound.arguments, out)
             return out
         return wrapper
     return decorator
