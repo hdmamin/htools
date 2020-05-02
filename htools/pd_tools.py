@@ -2,70 +2,9 @@ from functools import partial
 from IPython.display import display, HTML
 import matplotlib.pyplot as plt
 import operator
-import os
 import pandas as pd
 import pandas_flavor as pf
-from pathlib import Path
 from sklearn.model_selection import KFold
-
-
-class DataFrameReader:
-    """CSV reader that first tries to load local file, then falls back to S3.
-    """
-
-    def __init__(self, bucket, s3_root=''):
-        """Initialize a DataFrameReader that can be used throughout a project.
-
-        Parameters
-        ----------
-        bucket: str
-            Name of s3 bucket.
-        s3_root: str
-            Root prefix in S3 path that is the equivalent of 'data/' locally.
-            This will typically be either 'data/' or ''.
-        """
-        self.bucket = bucket
-        self.s3_root = s3_root
-        self.s3_pre = f's3://{self.bucket}/'
-
-    def read_csv(self, path, verbose=True, **kwargs):
-        """Try to read a csv locally, or from S3 if that fails.
-
-        Parameters
-        ----------
-        path: str or path
-            Local file to load.
-        verbose: bool
-            If True, print message after loading.
-        kwargs: any
-            Additional kwargs for `pd.read_csv()`.
-
-        Returns
-        -------
-        pd.DataFrame
-        """
-        try:
-            df = pd.read_csv(path, **kwargs)
-            if verbose: print(f'Loaded {df.shape[0]} rows from local file.')
-        except FileNotFoundError:
-            df = pd.read_csv(self._convert_path(path), **kwargs)
-            if verbose: print(f'Loaded {df.shape[0]} rows from S3.')
-        return df
-
-    def _convert_path(self, path):
-        """Convert local path to S3 path.
-
-        Parameters
-        ----------
-        path: str or Path
-            Local file to load.
-
-        Returns
-        -------
-        str: S3 path.
-        """
-        path = os.path.join(*Path(path).parts[1:])
-        return self.s3_pre + self.s3_root + path
 
 
 @pf.register_series_method
