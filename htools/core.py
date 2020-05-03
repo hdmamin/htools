@@ -290,21 +290,23 @@ def _read_write_args(path, mode):
         file with.
     """
     ext = path.rpartition('.')[-1]
-    if ext not in {'json', 'pkl', 'zip'}:
+    if ext not in {'json', 'pkl', 'txt', 'zip'}:
         raise InvalidArgumentError(
-            'Invalid extension. Make sure your filename ends with .json, '
-            '.pkl, or .zip.'
+            'Invalid extension. Make sure your filename ends with '
+            '.json, .pkl, or .zip.'
         )
         
     # Store in dict to make it easier to add additional formats in future.
-    ext2data = {'pkl': (open, 'b', pickle), 
-                'zip': (BZ2File, '', pickle), 
-                'json': (open, '', json)}
+    ext2data = {
+        'json': (open, '', json),
+        'pkl': (open, 'b', pickle),
+        'zip': (BZ2File, '', pickle),
+    }
     opener, mode_suffix, saver = ext2data[ext]
     return opener, mode + mode_suffix, saver
 
 
-def save(obj, path, verbose=True):
+def save(obj, path, mode_pre='w', verbose=True):
     """Wrapper to save data as text, pickle (optionally zipped), or json.
 
     Parameters
@@ -328,9 +330,10 @@ def save(obj, path, verbose=True):
     os.makedirs(path.parent, exist_ok=True)
     if verbose: print(f'Writing data to {path}.')
     if path.suffix == '.txt':
-        path.write_text(obj)
+        with path.open(mode_pre) as f:
+            f.write(obj)
     else:
-        opener, mode, saver = _read_write_args(str(path), 'w')
+        opener, mode, saver = _read_write_args(str(path), mode_pre)
         with opener(path, mode) as f:
             saver.dump(obj, f)
 

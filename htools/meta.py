@@ -629,7 +629,7 @@ class ReadOnly:
     """
 
     def __init__(self):
-        self.name = None
+        # self.name = None
         self.initialized = WeakSet()
 
     def __set_name__(self, owner, name):
@@ -743,6 +743,7 @@ class Callback(ABC):
             The function being decorated.
 
         """
+
     @abstractmethod
     def on_begin(self, func, inputs, output=None):
         """
@@ -1058,6 +1059,54 @@ def log_stdout(func=None, fname=''):
         return out
 
     return wrapper
+
+
+def log_cmd(path, mode='a'):
+    """Decorator that saves the calling command for a python script. This is
+    often useful for CLIs that train ML models. It makes it easy to re-run
+    the script at a later date with the same or similar arguments.
+
+    Parameters
+    ----------
+    path: str or Path
+        Specifies file where output will be saved.
+    mode: str
+        Determines whether output should overwrite old file or be appended.
+        One of ('a', 'w'). In most cases we will want append mode because we're
+        tracking multiple trials.
+
+    Examples
+    --------
+    ```
+    # train.py
+    import fire
+
+    @log_cmd('logs/training_runs.txt')
+    def train(lr, epochs, dropout, arch, data_version):
+        # Train model
+
+    if __name__ == '__main__':
+        fire.Fire(train)
+    ```
+
+    $ python train.py --lr 3e-3 --epochs 50 --dropout 0.5 --arch awd_lstm \
+        --data_version 1
+
+    After running the script with the above command, the file
+    'logs/training_runs.txt' now contains a nicely formatted version of the
+    calling command with a separate line for each argument name/value pair.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            res = '\npython'
+            for arg in sys.argv:
+                pre = ' \\\n\t' if arg.startswith('-') else ' '
+                res += pre+arg
+            save(res+'\n', Path(path), mode)
+            return func(*args, **kwargs)
+        return wrapped
+    return decorator
 
 
 def identity(x):
