@@ -1074,7 +1074,7 @@ def log_cmd(path, mode='a'):
         Determines whether output should overwrite old file or be appended.
         One of ('a', 'w'). In most cases we will want append mode because we're
         tracking multiple trials.
-
+    
     Examples
     --------
     ```
