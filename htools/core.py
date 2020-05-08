@@ -79,26 +79,29 @@ def tdir(obj, **kwargs):
     dict[str, type]: Dictionary mapping the name of the object's attributes to
     the corresponding types of those attributes.
     """
-    return {k: type(getattr(obj, k)) 
+    return {k: type(getattr(obj, k))
             for k, v in hdir(obj, **kwargs).items() if v == 'attribute'}
 
 
 def hasarg(func, arg):
-    """Checks if a function has a given argument.
-    Works with args and kwargs as well if you exclude the
-    stars. See example below.
+    """Checks if a function has a given argument. Works with args and kwargs as
+    well if you exclude the stars. See example below.
+
     Parameters
     ----------
     func: function
     arg: str
         Name of argument to look for.
+
     Returns
     -------
     bool
+
     Example
     -------
     def foo(a, b=6, *args):
         return
+
     >>> hasarg(foo, 'b')
     True
     >>> hasarg(foo, 'args')
@@ -275,15 +278,15 @@ def eprint(arr, indent=2, spacing=1):
 
 def _read_write_args(path, mode):
     """Helper for `save` and `load` functions.
-    
+
     Parameters
     ----------
     path: str
         Path to read/write object from/to.
     mode: str
-        'w' for writing files (as in `save`), 'r' for reading files 
+        'w' for writing files (as in `save`), 'r' for reading files
         (as in `load`).
-    
+
     Returns
     -------
     tuple: Function to open file, mode to open file with (str), object to open
@@ -295,7 +298,7 @@ def _read_write_args(path, mode):
             'Invalid extension. Make sure your filename ends with '
             '.json, .pkl, or .zip.'
         )
-        
+
     # Store in dict to make it easier to add additional formats in future.
     ext2data = {
         'json': (open, '', json),
@@ -318,6 +321,8 @@ def save(obj, path, mode_pre='w', verbose=True):
         File name to save object to. Should end with .txt, .pkl, .zip, or
         .json depending on desired output format. If .zip is used, object will
         be zipped and then pickled.
+    mode_pre: str
+        Determines whether to write or append text. One of ('w', 'a').
     verbose: bool
         If True, print a message confirming that the data was pickled, along
         with its path.
@@ -340,7 +345,7 @@ def save(obj, path, mode_pre='w', verbose=True):
 
 def load(path, verbose=True):
     """Wrapper to load text files or pickled (optionally zipped) or json data.
-    
+
     Parameters
     ----------
     path : str
@@ -348,7 +353,7 @@ def load(path, verbose=True):
         '.txt', '.json', '.pkl', or '.zip'.
     verbose : bool, optional
         If True, will print message stating where object was loaded from.
-    
+
     Returns
     -------
     object: The Python object that was pickled to the specified file.
@@ -366,15 +371,15 @@ def load(path, verbose=True):
 
 def dict_sum(*args):
     """Given two or more dictionaries with numeric values, combine them into a
-     single dictionary. For keys that appear in multiple dictionaries, their
-     corresponding values are added to produce the new value.
+    single dictionary. For keys that appear in multiple dictionaries, their
+    corresponding values are added to produce the new value.
 
-     This differs from combining two dictionaries in the following manner:
+    This differs from combining two dictionaries in the following manner:
 
-     {**d1, **d2}
+    {**d1, **d2}
 
-     The method shown above will combine the keys but will retain the value
-     from d2, rather than adding the values from d1 and d2.
+    The method shown above will combine the keys but will retain the value
+    from d2, rather than adding the values from d1 and d2.
 
     Parameters
     -----------
@@ -611,7 +616,7 @@ def safe_map(func, seq):
 
 
 def flatten(nested):
-    """Flatten a nested sequence where the sub-items can be sequences or 
+    """Flatten a nested sequence where the sub-items can be sequences or
     primitives. This differs slightly from itertools chain methods because
     those require all sub-items to be sequences. Here, items can be primitives,
     sequences, nested sequences, or any combination of these. Any iterable
@@ -726,8 +731,8 @@ def vcounts(arr, normalize=True):
     normalize: bool
         If True, counts will be converted to percentages.
 
-    -------
     Returns
+    -------
     dict: Maps unique items in `arr` to the number of times (or % of times)
         that they occur in `arr`.
     """
@@ -755,14 +760,55 @@ def first(it):
     return next(iter(it))
 
 
+def identity(x):
+    """Returns the input argument. Sometimes it is convenient to have this if
+    we sometimes apply a function to an item: rather than defining a None
+    variable, sometimes setting it to a function, then checking if it's None
+    every time we're about to call it, we can set the default as identity and
+    safely call it without checking.
+
+    Parameters
+    ----------
+    x: any
+
+    Returns
+    -------
+    x: Unchanged input.
+    """
+    return x
+
+
+def max_key(d, fn=identity):
+    """Find the maximum value in a dictionary and return the associated key.
+    If we want to compare values using something other than their numeric
+    values, we can specify a function. For example, with a dict mapping strings
+    to strings, fn=len would return the key with the longest value.
+
+    Parameters
+    ----------
+    d: dict
+        Values to select from.
+    fn: callable
+        Takes 1 argument (a single value from d.values()) and returns a number.
+        This will be used to sort the items.
+
+    Returns
+    -------
+    A key from dict `d`.
+    """
+    return max(d.items(), key=lambda x: fn(x[1]))[0]
+
+
 def cd_root(root_subdir='notebooks'):
     """Run at start of Jupyter notebook to enter project root.
+
     Parameters
     ----------
     root_subdir: str
         Name of a subdirectory contained in the project root directory.
         If not found in the current working directory, this will move
         to the parent directory.
+
     Examples
     --------
     Sample file structure (abbreviated):
@@ -771,6 +817,7 @@ def cd_root(root_subdir='notebooks'):
             fetch_raw_data.py
         notebooks/
             nb01_eda.ipynb
+
     Running cd_root() from nb01_eda.ipynb will change the working
     directory from notebooks/ to my_project/, which is typically the
     same directory we'd run scripts in py/ from. This makes converting

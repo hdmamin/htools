@@ -13,21 +13,21 @@ import types
 import warnings
 from weakref import WeakSet
 
-from htools import hdir, load, save
+from htools import hdir, load, save, identity
 
 
 class AutoInit:
-    """Mixin class where child class has a long list of init arguments where 
-    the parameter name and the class attribute will be the same. Note that 
+    """Mixin class where child class has a long list of init arguments where
+    the parameter name and the class attribute will be the same. Note that
     *args are not supported in the init method because each attribute that is
     defined in the resulting object must have a name. A variable length list
     of args can still be passed in as a single argument, of course, without the
     use of star unpacking.
 
     This updated version of AutoInit is slightly more user friendly than in V1
-    (no more passing locals() to super()) but also slower and probably requires 
-    more testing (all because of the frame hack in the init method). Note that 
-    usage differs from the AutoInit present in htools<=2.0.0, so this is a  
+    (no more passing locals() to super()) but also slower and probably requires
+    more testing (all because of the frame hack in the init method). Note that
+    usage differs from the AutoInit present in htools<=2.0.0, so this is a
     breaking change.
 
     Examples
@@ -72,7 +72,7 @@ class AutoInit:
         attrs.pop('self')
         bound = inspect.signature(self.__class__.__init__)\
                        .bind_partial(**attrs)
-        
+
         # Flatten dict so kwargs are not listed as their own argument.
         bound.arguments.update(
             bound.arguments.pop('kwargs', {}).get('kwargs', {})
@@ -87,14 +87,14 @@ class AutoInit:
         return:
 
         child = Child('Henry', 8, 'm', 'brown', 52, 70, 3, 'green')
-        Child(name='Henry', age=8, sex='m', hair='brown', height=52, 
+        Child(name='Henry', age=8, sex='m', hair='brown', height=52,
               weight=70, grade=3, eyes='green')
-        
+
         Returns
         -------
         str
         """
-        fstrs = (f'{k}={repr(getattr(self, k))}' for k in self._init_keys)            
+        fstrs = (f'{k}={repr(getattr(self, k))}' for k in self._init_keys)
         return f'{self.__class__.__name__}({", ".join(fstrs)})'
 
 
@@ -440,7 +440,7 @@ def assert_raises(error):
     >>> with assert_raises(ValueError) as ar:
     >>>     a = 'b' + 6
 
-    AssertionError: Wrong error raised. Expected PermissionError, got 
+    AssertionError: Wrong error raised. Expected PermissionError, got
     TypeError(can only concatenate str (not "int") to str)
 
     # Third example throws an error because the code inside the context manager
@@ -480,7 +480,7 @@ def timebox(time, strict=True):
         Max number of seconds before throwing error.
     strict: bool
         If True, timeout will cause an error to be raised, halting execution of
-        the entire program. If False, a warning message will be printed and 
+        the entire program. If False, a warning message will be printed and
         the timeboxed operation will end, letting the program proceed to the
         next step.
 
@@ -518,7 +518,7 @@ def timeboxed(time, strict=True):
         Max number of seconds before throwing error.
     strict: bool
         If True, timeout will cause an error to be raised, halting execution of
-        the entire program. If False, a warning message will be printed and 
+        the entire program. If False, a warning message will be printed and
         the timeboxed operation will end, letting the program proceed to the
         next step.
 
@@ -567,7 +567,7 @@ class cached_property:
      [.4, .13, .06, .55]
      [.77, .14, .05, .9]]
 
-    # Second call accesses attribute without re-computing 
+    # Second call accesses attribute without re-computing
     # (notice no "Building matrix" message).
     >>> v = Vocab(tokens)
     >>> v.embedding_matrix
@@ -582,9 +582,9 @@ class cached_property:
 
     def __get__(self, instance, cls):
         """This method is called when the variable being accessed is not in the
-        instance's state dict. The next time the attribute is accessed, the 
+        instance's state dict. The next time the attribute is accessed, the
         computed value will be in the state dict so this method (and the method
-        in the instance itself) is not called again unless the attribute is 
+        in the instance itself) is not called again unless the attribute is
         deleted.
         """
         # When attribute accessed as class method, instance is None.
@@ -600,9 +600,9 @@ class cached_property:
 
 class ReadOnly:
     """Descriptor to make an attribute read-only. This means that once a value
-    has been set, the user cannot change or delete it. Note that read-only 
-    attributes must first be created as class variables (see example below). 
-    To allow more flexibility, we do allow the user to manually manipulate the 
+    has been set, the user cannot change or delete it. Note that read-only
+    attributes must first be created as class variables (see example below).
+    To allow more flexibility, we do allow the user to manually manipulate the
     instance dictionary.
 
     Examples
@@ -624,7 +624,7 @@ class ReadOnly:
     PermissionError: Attribute is read-only.
 
     >>> del d.breed
-    
+
     PermissionError: Attribute is read-only.
     """
 
@@ -657,49 +657,49 @@ class ReadOnly:
 
 
 def validating_property(func, allow_del=False):
-    """Factory that makes properties that perform some user-specified 
+    """Factory that makes properties that perform some user-specified
     validation when setting values. The returned function must be used as a
-    descriptor to create a class variable before setting the instance 
+    descriptor to create a class variable before setting the instance
     attribute.
-    
+
     Parameters
     ----------
     func: function
         Function or lambda that accepts a single parameter. This will be used
-        when attempting to set a value for the managed attribute. It should 
+        when attempting to set a value for the managed attribute. It should
         return True if the value is acceptable, False otherwise.
     allow_del: bool
         If True, allow the attribute to be deleted.
-        
+
     Returns
     -------
-    function: A property with validation when setting values. Note that this 
+    function: A property with validation when setting values. Note that this
         will be used as a descriptor, so it must create a class variable as
         shown below. In the example, also notice that the name passed to
         LengthyInt mustt match the name of the variable it is assigned to.
-    
+
     Examples
     --------
     LengthyInt = validating_property(
         lambda x: isinstance(x, int) and len(str(int)) > 4
     )
-    
+
     class Foo:
         long = LengthyInt('long')
         def __init__(self, a, long):
             self.a = a
             self.long = long
-            
+
     >>> foo = Foo(3, 4)
-    
+
     ValueError: Invalid value 4 for argument long.
-   
-    # No error on instantiation because the argument is a valid LengthyInt. 
+
+    # No error on instantiation because the argument is a valid LengthyInt.
     >>> foo = Foo(3, 543210)
     >>> foo.long
 
     543210
-   
+
     >>> foo = Foo(3, 'abc')
     ValueError: Invalid value 'abc' for argument long.
     """
@@ -707,14 +707,14 @@ def validating_property(func, allow_del=False):
         @property
         def method(instance):
             return instance.__dict__[name]
-        
+
         @method.setter
         def method(instance, val):
             if func(val):
                 instance.__dict__[name] = val
             else:
                 raise ValueError(f'Invalid value {val} for argument {name}.')
-       
+
         if allow_del:
             @method.deleter
             def method(instance):
@@ -816,32 +816,32 @@ def callbacks(cbs):
 
 
 def typecheck(func_=None, **types):
-    """Decorator to enforce type checking for a function or method. There are 
+    """Decorator to enforce type checking for a function or method. There are
     two ways to call this: either explicitly passing argument types to the
     decorator, or letting it infer them using type annotations in the function
     that will be decorated. We allow multiple both usage methods since older
-    versions of Python lack type annotations, and also because I feel the 
+    versions of Python lack type annotations, and also because I feel the
     annotation syntax can hurt readability.
 
     Parameters
     ----------
     func_: function
-        The function to decorate. When using decorator with 
+        The function to decorate. When using decorator with
         manually-specified types, this is None. Underscore is used so that
-        `func` can still be used as a valid keyword argument for the wrapped 
+        `func` can still be used as a valid keyword argument for the wrapped
         function.
     types: type
         Optional way to specify variable types. Use standard types rather than
-        importing from the typing library, as subscripted generics are not 
+        importing from the typing library, as subscripted generics are not
         supported (e.g. typing.List[str] will not work; typing.List will but at
-        that point there is no benefit over the standard `list`). 
-        
+        that point there is no benefit over the standard `list`).
+
     Examples
     --------
     In the first example, we specify types directly in the decorator. Notice
-    that they can be single types or tuples of types. You can choose to 
+    that they can be single types or tuples of types. You can choose to
     specify types for all arguments or just a subset.
-    
+
     @typecheck(x=float, y=(int, float), iters=int, verbose=bool)
     def process(x, y, z, iters=5, verbose=True):
         print(f'z = {z}')
@@ -849,19 +849,19 @@ def typecheck(func_=None, **types):
             if verbose: print(f'Iteration {i}...')
             x *= y
         return x
-    
+
     >>> process(3.1, 4.5, 0, 2.0)
     TypeError: iters must be <class 'int'>, not <class 'float'>.
-    
+
     >>> process(3.1, 4, 'a', 1, False)
     z = a
     12.4
-    
+
     Alternatively, you can let the decorator infer types using annotations
-    in the function that is to be decorated. The example below behaves 
+    in the function that is to be decorated. The example below behaves
     equivalently to the explicit example shown above. Note that annotations
     regarding the returned value are ignored.
-    
+
     @typecheck
     def process(x:float, y:(int, float), z, iters:int=5, verbose:bool=True):
         print(f'z = {z}')
@@ -869,10 +869,10 @@ def typecheck(func_=None, **types):
             if verbose: print(f'Iteration {i}...')
             x *= y
         return x
-        
+
     >>> process(3.1, 4.5, 0, 2.0)
     TypeError: iters must be <class 'int'>, not <class 'float'>.
-    
+
     >>> process(3.1, 4, 'a', 1, False)
     z = a
     12.4
@@ -882,10 +882,10 @@ def typecheck(func_=None, **types):
         return partial(typecheck, **types)
     # Case 2: Infer types from annotations. Skip if Case 1 already occurred.
     elif not types:
-        types = {k: v.annotation 
+        types = {k: v.annotation
                  for k, v in inspect.signature(func_).parameters.items()
                  if not v.annotation == inspect._empty}
-    
+
     @wraps(func_)
     def wrapper(*args, **kwargs):
         fargs = inspect.signature(wrapper).bind(*args, **kwargs).arguments
@@ -1074,7 +1074,7 @@ def log_cmd(path, mode='a'):
         Determines whether output should overwrite old file or be appended.
         One of ('a', 'w'). In most cases we will want append mode because we're
         tracking multiple trials.
-    
+
     Examples
     --------
     ```
@@ -1095,36 +1095,30 @@ def log_cmd(path, mode='a'):
     After running the script with the above command, the file
     'logs/training_runs.txt' now contains a nicely formatted version of the
     calling command with a separate line for each argument name/value pair.
+
+    We can also use variables that are passed to our function. All function
+    args and kwargs will be passed to the string formatter so your variable
+    names must match:
+
+    @log_cmd('logs/train_run_v{version_number}.{ext}')
+    def train(version_number, ext, epochs, arch='lstm'):
+        # Train model
     """
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
-            res = '\npython'
+            bound = inspect.signature(func).bind(*args, **kwargs)
+            bound.apply_defaults()
+            fn_locals = bound.arguments
+            fn_locals.update(fn_locals.pop('kwargs', {}))
+            res = 'python'
             for arg in sys.argv:
                 pre = ' \\\n\t' if arg.startswith('-') else ' '
                 res += pre+arg
-            save(res+'\n', Path(path), mode)
+            save(res+'\n\n', Path(path.format(**fn_locals)), mode)
             return func(*args, **kwargs)
         return wrapped
     return decorator
-
-
-def identity(x):
-    """Returns the input argument. Sometimes it is convenient to have this if
-    we sometimes apply a function to an item: rather than defining a None
-    variable, sometimes setting it to a function, then checking if it's None
-    every time we're about to call it, we can set the default as identity and
-    safely call it without checking.
-
-    Parameters
-    ----------
-    x: any
-
-    Returns
-    -------
-    x: Unchanged input.
-    """
-    return x
 
 
 def wrapmethods(*decorators, methods=(), internals=False):
@@ -1290,6 +1284,21 @@ def block_timer():
     finally:
         duration = time.perf_counter() - start
         print(f'[TIMER]: Block executed in {duration:.3f} seconds.')
+
+
+def count_calls(func):
+    """Count the number of times a function has been called. The function can
+    access this value inside itself through the attribute 'calls'. Note that
+    counting is defined such that during the first call, func.calls already=1
+    (i.e. it can be considered the n'th call, not that n calls have previously
+    taken place not counting the current one).
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        calls = getattr(wrapper, 'calls', 0)
+        wrapper.calls = calls + 1
+        return func(*args, **kwargs)
+    return wrapper
 
 
 def copy_func(func):
