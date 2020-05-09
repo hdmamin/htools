@@ -135,13 +135,13 @@ def auto_repr(cls):
     Foo(a=3, b='b')
     """
 
-    def repr_(instance):
+    def _repr(instance):
         args = dict(inspect.signature(instance.__init__).parameters)
         arg_strs = (f'{k}={repr(v)}' for k, v in instance.__dict__.items()
                     if k in args.keys())
         return f'{type(instance).__name__}({", ".join(arg_strs)})'
 
-    cls.__repr__ = repr_
+    cls.__repr__ = _repr
     return cls
 
 
@@ -200,7 +200,6 @@ class LoggerMixin:
         for handler in handlers:
             handler.setFormatter(formatter)
             logger.addHandler(handler)
-
         return logger
 
 
@@ -295,7 +294,6 @@ def lazychain(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
         return func(*args, **kwargs)
-
     return wrapped
 
 
