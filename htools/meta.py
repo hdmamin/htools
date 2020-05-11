@@ -3,6 +3,7 @@ from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
 from functools import wraps, partial, update_wrapper
 import inspect
+import io
 import logging
 import os
 from pathlib import Path
@@ -416,6 +417,83 @@ class LazyChainable(metaclass=LazyChainMeta):
     def __repr__(self):
         argstrs = (f'{k}={repr(v)}' for k, v in vars(self).items())
         return f'{type(self).__name__}({", ".join(argstrs)})'
+
+
+def params(func):
+    """Get parameters in a functions signature.
+
+    Parameters
+    ----------
+    func: function
+
+    Returns
+    -------
+    dict: Maps name (str) to Parameter.
+    """
+    return dict(inspect.signature(func).parameters)
+
+
+def hasarg(func, arg):
+    """Check if a function has a parameter with a given name. (Technically,
+    hasparam might be a more appropriate name but hasarg lets us match the
+    no-space convention of hasattr and getattr while maintaining readability.)
+
+    Parameters
+    ----------
+    func: function
+    arg: str
+        The name of the parameter that you want to check for in func's
+        signature.
+
+    Returns
+    -------
+    bool: True if `func` has a parameter named `arg`.
+    """
+    return arg in params(func)
+
+
+def bound_args(func, args, kwargs, collapse_kwargs=True):
+    bound = inspect.signature(func).bind_partial(*args, **kwargs)
+    bound.apply_defaults()
+    args = bound.arguments
+    if not collapse_kwargs: return args
+    args.update(args.pop('kwargs', {}))
+    return args
+
+
+def handle_interrupt(func=None, cbs=(), verbose=True):
+    """Decorator that allows us to interrupt a function with ctrl-c. We can
+    pass in callbacks that execute on function end. Keep in mind that local
+    variables will be lost as soon as `func` stops running. If `func` is a
+    method, it may be appropriate to update instance variables while running,
+    which we can access because the instance will be the first element of
+    `args` (passed in as `self`).
+
+    Note: Kwargs are passed to callbacks as a single dict, not as **kwargs.
+
+    Parameters
+    ----------
+    func: function
+    cbs: Iterable[Callback]
+        List of callbacks to execute when `func` completes. These will execute
+        whether we interrupt or not.
+    verbose: bool
+        If True, print a message to stdout when an interrupt occurs.
+    """
+    if not func: return partial(handle_interrupt, cbs=cbs, verbose=verbose)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        func_bound_args = bound_args(func, args, kwargs, collapse_kwargs=False)
+        try:
+            res = func(*args, **kwargs)
+        except KeyboardInterrupt:
+            if verbose: print('KeyboardInterrupt. Aborting...')
+            res = None
+        finally:
+            for cb in cbs:
+                cb.on_end(func, func_bound_args, res)
+        return res
+    return wrapper
 
 
 @contextmanager
@@ -1059,6 +1137,16 @@ def log_stdout(func=None, fname=''):
     return wrapper
 
 
+def return_stdout(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        res = io.StringIO()
+        with redirect_stdout(res):
+            func(*args, **kwargs)
+        return res.getvalue()
+    return wrapper
+
+
 def log_cmd(path, mode='a'):
     """Decorator that saves the calling command for a python script. This is
     often useful for CLIs that train ML models. It makes it easy to re-run
@@ -1105,10 +1193,7 @@ def log_cmd(path, mode='a'):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
-            bound = inspect.signature(func).bind(*args, **kwargs)
-            bound.apply_defaults()
-            fn_locals = bound.arguments
-            fn_locals.update(fn_locals.pop('kwargs', {}))
+            fn_locals = bound_args(func, args, kwargs, True)
             res = 'python'
             for arg in sys.argv:
                 pre = ' \\\n\t' if arg.startswith('-') else ' '
@@ -1372,3 +1457,5 @@ def rename_params(func, **old2new):
         params[idx] = inspect.Parameter(new, params[idx].kind, **kwargs)
     new_func.__signature__ = sig.replace(parameters=params)
     return new_func
+
+

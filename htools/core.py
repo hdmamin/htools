@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import pickle
+from random import choice
 import re
 import smtplib
 import sys
@@ -743,8 +744,8 @@ def vcounts(arr, normalize=True):
     return counts
 
 
-def first(it):
-    """Get the first item from an iterable (e.g. dict, set, torch DataLoader).
+def item(it, random=True, try_values=True):
+    """Get an item from an iterable (e.g. dict, set, torch DataLoader).
     This is a quick way to access an item for iterables that don't support
     indexing, or do support indexing but require us to know a key.
 
@@ -752,11 +753,22 @@ def first(it):
     ----------
     it: Iterable
         Container that we want to access a value from.
+    random: bool
+        If True, pick a random value from `it`. Otherwise just return the first
+        value.
+    try_values: bool
+        If True, will check if `it` has a `values` attribute and will operate
+        on that if it does. We often want to see a random value from a dict
+        rather than a key. If we want both a key and value, we could set
+        try_values=False and pass in d.items().
 
     Returns
     -------
-    any: The first item in the iterable.
+    any: An item from the iterable.
     """
+    if try_values and hasattr(it, 'values'): it = it.values()
+    if random:
+        return choice(list(it))
     return next(iter(it))
 
 
