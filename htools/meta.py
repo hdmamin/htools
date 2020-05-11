@@ -69,7 +69,7 @@ class AutoInit:
         # Calculate how many frames to go back to get child class.
         frame_idx = type(self).__mro__.index(AutoInit)
         attrs = {k: v for k, v in sys._getframe(frame_idx).f_locals.items()
-                  if not k.startswith('__')}
+                 if not k.startswith('__')}
         attrs.pop('self')
         bound = inspect.signature(self.__class__.__init__)\
                        .bind_partial(**attrs)
@@ -453,6 +453,26 @@ def hasarg(func, arg):
 
 
 def bound_args(func, args, kwargs, collapse_kwargs=True):
+    """Get the bound arguments for a function (with defaults applied). This is
+    very commonly used when building decorators that log, check, or alter how
+    a function was called.
+
+    Parameters
+    ----------
+    func: function
+    args: tuple
+        Notice this is not *args. Just pass in the tuple.
+    kwargs: dict
+        Notice this is not **kwargs. just pass in the dict.
+    collapse_kwargs: bool
+        If True, collapse kwargs into the regular parameter dict. E.g.
+        {'a': 1, 'b': True, 'kwargs': {'c': 'c_val', 'd': 0}} ->
+        {'a': 1, 'b': True, 'c': 'c_val', 'd': 0}
+
+    Returns
+    -------
+    OrderedDict[str, any]: Maps parameter name to passed value.
+    """
     bound = inspect.signature(func).bind_partial(*args, **kwargs)
     bound.apply_defaults()
     args = bound.arguments
@@ -483,7 +503,7 @@ def handle_interrupt(func=None, cbs=(), verbose=True):
     if not func: return partial(handle_interrupt, cbs=cbs, verbose=verbose)
     @wraps(func)
     def wrapper(*args, **kwargs):
-        func_bound_args = bound_args(func, args, kwargs, collapse_kwargs=False)
+        func_inputs = bound_args(func, args, kwargs, collapse_kwargs=False)
         try:
             res = func(*args, **kwargs)
         except KeyboardInterrupt:
@@ -491,7 +511,7 @@ def handle_interrupt(func=None, cbs=(), verbose=True):
             res = None
         finally:
             for cb in cbs:
-                cb.on_end(func, func_bound_args, res)
+                cb.on_end(func, func_inputs, res)
         return res
     return wrapper
 
@@ -1077,15 +1097,13 @@ def debug(func=None, prefix='', arguments=True):
         out_fmt = '\n{}CALLING {}({})'
         arg_strs = ''
         if arguments:
-            sig = inspect.signature(wrapper).bind_partial(*args, **kwargs)
-            sig.apply_defaults()
-            sig.arguments.update(sig.arguments.pop('kwargs', {}))
-            if sig.arguments:
-                first_key = next(iter(sig.arguments))
+            sig = bound_args(wrapper, args, kwargs, collapse_kwargs=True)
+            if sig:
+                first_key = next(iter(sig))
                 # Remove self/cls arg from methods.
                 if first_key in ('self', 'cls'):
-                    del sig.arguments[first_key]
-            arg_strs = (f'{k}={repr(v)}' for k, v in sig.arguments.items())
+                    del sig[first_key]
+            arg_strs = (f'{k}={repr(v)}' for k, v in sig.items())
 
         # Print call message and return output.
         print(out_fmt.format(prefix, func.__qualname__, ', '.join(arg_strs)))
@@ -1138,6 +1156,14 @@ def log_stdout(func=None, fname=''):
 
 
 def return_stdout(func):
+    """Decorator that returns printed output from the wrapped function. This
+    may be useful if we define a function that only prints information and
+    returns nothing, then later decide we want to access the printed output.
+    Rather than re-writing everything, we can slap a @return_stdout decorator
+    on top and leave it as is. This should not be used if the decorated
+    function already returns something else since we will only return what is
+    printed to stdout. For that use case, consider the `log_stdout` function.
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         res = io.StringIO()
