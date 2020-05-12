@@ -1318,7 +1318,6 @@ def delegate(attr):
             return getattr(delegate, new_attr)
         cls.__getattr__ = f
         return cls
-
     return wrapper
 
 
