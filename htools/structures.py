@@ -56,7 +56,7 @@ class FuzzyKeyDict(dict):
 
     Examples
     --------
-    d = FuzzyKeyDict(limit=3, verbose=True)
+    d = FuzzyKeyDict(limit=3)
     d['dog'] = 0
     d['cat'] = 1
     d['alley cat'] = 2
