@@ -772,6 +772,37 @@ def item(it, random=True, try_values=True):
     return next(iter(it))
 
 
+def lmap(fn, *args):
+    """Basically a wrapper for `map` that returns a list rather than a
+    generator. This is such a common pattern that I think it deserves its own
+    function (think of it as a concise alternative to a list comprehension).
+    One slight difference is that we use *args instead of passing in an
+    iterable. This adds a slight convenience for the intended use case (fast
+    prototyping). See the `Examples` for more on this.
+
+    Parameters
+    ----------
+    args: any
+
+    Returns
+    -------
+    list
+
+    Examples
+    --------
+    Consider these three equivalent syntax options:
+
+    lmap(fn, x, y)
+    [fn(obj) for obj in (x, y)]
+    list(map(fn, (x, y))
+
+    When quickly iterating, option 1 saves a bit of typing. The extra
+    parentheses that options 2 and 3 require to put x and y in a temporary
+    data structure can get messy as we add more complex logic.
+    """
+    return list(map(fn, args))
+
+
 def identity(x):
     """Returns the input argument. Sometimes it is convenient to have this if
     we sometimes apply a function to an item: rather than defining a None
