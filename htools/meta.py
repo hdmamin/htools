@@ -1440,7 +1440,8 @@ def copy_func(func):
     new_func = types.FunctionType(func.__code__, func.__globals__,
                                   func.__name__, func.__defaults__,
                                   func.__closure__)
-    new_func.__kwdefaults__ = func.__kwdefaults__.copy()
+    defaults = getattr(func, '__kwdefaults__') or {}
+    new_func.__kwdefaults__ = defaults.copy()
     return update_wrapper(new_func, func)
 
 
@@ -1473,14 +1474,36 @@ def rename_params(func, **old2new):
     now be named "y_true" and "y_pred", respectively. """
     new_func = copy_func(func)
     sig = inspect.signature(new_func)
-    kw_defaults = func.__kwdefaults__
+    kw_defaults = func.__kwdefaults__ or {}
     names, params = map(list, zip(*sig.parameters.items()))
     for old, new in old2new.items():
         idx = names.index(old)
-        default = kw_defaults.get(old)
-        kwargs = {'default': default} if default else {}
-        params[idx] = inspect.Parameter(new, params[idx].kind, **kwargs)
+        default = kw_defaults.get(old) or params[idx].default
+        params[idx] = inspect.Parameter(new, params[idx].kind, default=default)
     new_func.__signature__ = sig.replace(parameters=params)
     return new_func
 
+
+def immutify_defaults(func):
+    """Decorator to make a function's defaults arguments effectively immutable.
+    We accomplish this by storing the initially provided defaults and assigning
+    them back to the function's signature after each call. If you use a
+    variable as a default argument, this does not mean that the variable's
+    value will remain unchanged - it just ensures the initially provided value
+    will be used for each call.
+    """
+    # If `__hash__` is not None, object is immutable already.
+    # Python sets __defaults__ and __kwdefaults__ to None when they're empty.
+    _defaults = tuple(o if getattr(o, '__hash__') else deepcopy(o)
+                      for o in getattr(func, '__defaults__') or ()) or None
+    _kwdefaults = {k: v if getattr(v, '__hash__') else deepcopy(v) for k, v
+                   in (getattr(func, '__kwdefaults__') or {}).items()} or None
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        res = func(*args, **kwargs)
+        wrapper.__defaults__ = func.__defaults__ = deepcopy(_defaults)
+        wrapper.__kwdefaults__ = func.__kwdefaults__ = deepcopy(_kwdefaults)
+        return res
+    return wrapper
 
