@@ -905,6 +905,65 @@ def max_key(d, fn=identity):
     return max(d.items(), key=lambda x: fn(x[1]))[0]
 
 
+def kwargs_fallback(self, *args, assign=False, **kwargs):
+    """Use inside a method that accepts **kwargs. Sometimes we want to use
+    an instance variable for some computation but want to give the user the
+    option to pass in a new value to the method (often ML hyperparameters) to
+    be used instead. This function makes that a little more convenient.
+
+    Parameters
+    ----------
+    self: object
+        The class instance. In most cases users will literally pass `self` in.
+    args: str
+        One or more names of variables to use this procedure on.
+    assign: bool
+        If True, any user-provided kwargs will be used to update attributes of
+        the instance. If False (the default), they will be used in computation
+        but won't change the state of the instance.
+    kwargs: any
+        Just forward along the kwargs passed to the method.
+
+    Returns
+    -------
+    list or single object: If more than one arg is specified, a list of values
+        is returned. For just one arg, a single value will be returned.
+
+    Examples
+    --------
+    class Foo:
+
+        def __init__(self, a, b=3, c=('a', 'b', 'c')):
+            self.a, self.b, self.c = a, b, c
+
+        def walk(self, d, **kwargs):
+            a, c = kwargs_fallback(self, 'a', 'c', **kwargs)
+            print(self.a, self.b, self.c)
+            print(a, c, end='\n\n')
+
+            b, c = kwargs_fallback(self, 'b', 'c', assign=True, **kwargs)
+            print(self.a, self.b, self.c)
+            print(b, c)
+
+    # Notice the first `kwargs_fallback` call doesn't change attributes of f
+    # but the second does. In the first block of print statements, the variable
+    # `b` does not exist yet because we didn't include it in *args.
+    >>> f = Foo(1)
+    >>> f.walk(d=0, b=10, c=100)
+    1 3 ('a', 'b', 'c')
+    1 100
+
+    1 10 100
+    10 100
+    """
+    res = []
+    for arg in args:
+        val = kwargs.get(arg) or getattr(self, arg)
+        res.append(val)
+        if assign: setattr(self, arg, val)
+    return res if len(res) > 1 else res[0]
+
+
 def cd_root(root_subdir='notebooks'):
     """Run at start of Jupyter notebook to enter project root.
 
