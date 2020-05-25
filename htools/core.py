@@ -803,6 +803,40 @@ def lmap(fn, *args):
     return list(map(fn, args))
 
 
+def attrmap(attr, *args):
+    """More convenient syntax for quick data exploration. Get an attribute
+    value for multiple objects.
+
+    Parameters
+    ----------
+    attr: str
+        Name of attribute to retrieve for each object.
+    args: any
+        Objects (usually of same type) to retrieve attributes for.
+
+    Returns
+    -------
+    list: Result for each object.
+
+    Examples
+    --------
+    df1 = pd.DataFrame(np.random.randint(0, 10, (4, 5)))
+    df2 = pd.DataFrame(np.random.randint(0, 3, (4, 5)))
+    df3 = pd.DataFrame(np.random.randint(0, 3, (2, 3)))
+
+    >>> attrmap('shape', df1, df2, df3)
+    [(4, 5), (4, 5), (2, 3)]
+
+    net = nn.Sequential(...)
+    >>> attrmap('shape', *net.parameters())
+    [torch.Size([5, 3]),
+     torch.Size([16, 4]),
+     torch.Size([16, 3]),
+     torch.Size([16])]
+    """
+    return [getattr(arg, attr) for arg in args]
+
+
 def identity(x):
     """Returns the input argument. Sometimes it is convenient to have this if
     we sometimes apply a function to an item: rather than defining a None

@@ -1271,11 +1271,10 @@ def wrapmethods(*decorators, methods=(), internals=False):
     return wrapper
 
 
-def delegate(attr):
+def delegate(attr, iter_magics=False, skip=(), getattr_=True):
     """Decorator that automatically delegates attribute calls to an attribute
     of the class. This is a nice convenience to have when using composition.
-    This does NOT affect magic methods; for that, see the `forwardable`
-    library.
+    User can also choose to delegate magic methods related to iterables.
 
     Note: I suspect this could lead to some unexpected behavior so be careful
     using this in production.
@@ -1284,6 +1283,18 @@ def delegate(attr):
     ----------
     attr: str
         Name of variable to delegate to.
+    iter_magics: bool
+        If True, delegate the standard magic methods related to iterables:
+        '__getitem__', '__setitem__', '__delitem__', and '__len__'.
+    skip: Iterable[str]
+        Can optionally provide a list of iter_magics to skip. This only has
+        an effect when `iter_magics` is True. For example, you may want to be
+        able to iterate over the class but no allow item deletion. In this case
+        you should pass skip=('__delitem__').
+    getattr_: bool
+        If True, delegate non-magic methods. This means that if you try to
+        access an attribute or method that the object produced by the decorated
+        class does not have, it will look for it in the delegated object.
 
     Examples
     --------
@@ -1299,9 +1310,9 @@ def delegate(attr):
     page = Page('http://www.coursera.org')
     page.find_all('div')
 
-    Example 2: Magic methods are not delegated.
+    Example 2: Magic methods except for __delitem__ are delegated.
 
-    @delegate('data')
+    @delegate('data', True, skip=('__delitem__'))
     class Foo:
         def __init__(self, data, city):
             self.data = data
@@ -1309,15 +1320,62 @@ def delegate(attr):
 
     >>> f = Foo(['a', 'b', 'c'], 'San Francisco')
     >>> len(f)
+    3
 
-    TypeError: object of type 'Foo' has no len()
+    >>> for char in f:
+    >>>     print(char)
+    a
+    b
+    c
+
+    >>> f.append(3); f.data
+    ['a', 'b', 'c', 3]
+
+    >>> del f[0]
+    TypeError: 'Foo' object doesn't support item deletion
+
+    >>> f.clear(); f.data
+    []
     """
     def wrapper(cls):
-        def f(self, new_attr):
-            delegate = getattr(self, attr)
-            return getattr(delegate, new_attr)
-        cls.__getattr__ = f
+        def _delegate(self, attr):
+            """Helper that retrieves object that an instance delegates to."""
+            return getattr(self, attr)
+
+        # Any missing attribute will be delegated.
+        if getattr_:
+            def _getattr(self, new_attr):
+                return getattr(_delegate(self, attr), new_attr)
+
+            cls.__getattr__ = _getattr
+
+        # If specified, delegate magic methods to make cls iterable.
+        if iter_magics:
+            if '__getitem__' not in skip:
+                def _getitem(self, i):
+                    return _delegate(self, attr)[i]
+
+                setattr(cls, '__getitem__', _getitem)
+
+            if '__setitem__' not in skip:
+                def _setitem(self, i, val):
+                    _delegate(self, attr)[i] = val
+
+                setattr(cls, '__setitem__', _setitem)
+
+            if '__delitem__' not in skip:
+                def _delitem(self, i):
+                    del _delegate(self, attr)[i]
+
+                setattr(cls, '__delitem__', _delitem)
+
+            if '__len__' not in skip:
+                def _len(self):
+                    return len(_delegate(self, attr))
+
+                setattr(cls, '__len__', _len)
         return cls
+
     return wrapper
 
 
