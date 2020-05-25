@@ -506,14 +506,20 @@ def select(items, keep=(), drop=()):
 
 
 def differences(obj1, obj2, methods=False, **kwargs):
-    """Find the differences between two objects of the same type. This is a
-    way to get more detail beyond whether two objects are equal or not.
+    """Find the differences between two objects (generally of the same type -
+    technically this isn't enforced but we do require that the objects have
+    the same set of attribute names so a similar effect is achieved. Actual
+    type checking was causing problems comparing multiple Args instances,
+    presumably because each Args object is defined when called).
+
+    This is a way to get more detail beyond whether two objects are equal or
+    not.
 
     Parameters
     -----------
-    obj1: any type
+    obj1: any
         An object.
-    obj2: same type as obj1
+    obj2: any, usually the same type as obj1
         An object.
     methods: bool
         If True, include methods in the comparison. If False, only attributes
@@ -545,10 +551,13 @@ def differences(obj1, obj2, methods=False, **kwargs):
         first is the corresponding value for obj1 and the second is the
         corresponding value for obj2.
     """
-    if obj1 == obj2:
-        return {}
+    # May built-in comparison functionality. Keep error handling broad.
+    try:
+        if obj1 == obj2:
+            return {}
+    except Exception:
+        pass
 
-    assert type(obj1) == type(obj2), 'Objects must be the same type.'
     attr1, attr2 = hdir(obj1, **kwargs), hdir(obj2, **kwargs)
     assert attr1.keys() == attr2.keys(), 'Objects must have same attributes.'
 
@@ -558,7 +567,7 @@ def differences(obj1, obj2, methods=False, **kwargs):
         if not (methods or v1 == 'attribute'):
             continue
 
-        # Comparisons work differently for numpy arrays.
+        # Comparisons work differently for arrays/tensors than other objects.
         val1, val2 = getattr(obj1, k1), getattr(obj2, k2)
         try:
             equal = (val1 == val2).all()
