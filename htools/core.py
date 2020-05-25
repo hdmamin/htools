@@ -1,6 +1,7 @@
 from bz2 import BZ2File
 from collections import Counter, Sequence, Iterable, \
     Mapping
+import gc
 from email.mime.text import MIMEText
 import inspect
 from itertools import chain
@@ -230,6 +231,25 @@ def hsplit(text, sep, group=True, attach=True):
 
     # Subcase 1.2
     return [word for word in chain(*zip(words, [sep]*len(words))) if word][:-1]
+
+
+def rmvars(*args):
+    """Wrapper to quickly free up memory by deleting global variables. Htools
+    3.0 does not provide a way to do this for local variables.
+
+    Parameters
+    ----------
+    args: str
+        One or more variable names to delete. Do not pass in the variable
+        itself.
+
+    Returns
+    -------
+    None
+    """
+    for arg in args:
+        del globals()[arg]
+    gc.collect()
 
 
 def print_object_sizes(space, limit=None, exclude_underscore=True):
