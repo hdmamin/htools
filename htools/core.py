@@ -905,6 +905,52 @@ def max_key(d, fn=identity):
     return max(d.items(), key=lambda x: fn(x[1]))[0]
 
 
+def fgrep(text, term, window=25):
+    """Search a string for a given term. If found, print it with some context.
+    Similar to `grep -C 1 term text`. `fgrep` is short for faux grep.
+
+    Parameters
+    ----------
+    text: str
+        Text to search.
+    term: str
+        Term to look for in text.
+    window: int
+        Number of characters to display before and after the matching term.
+
+    Returns
+    -------
+    str: The desired term and its surrounding context. If the term isn't
+    present, an empty string is returned.
+    """
+    idx = text.find(term)
+    if idx == -1:
+        return ''
+    return text[max(idx-window, 0):idx+window]
+
+
+def spacer(char='-', n_chars=79, newlines_before=1, newlines_after=1):
+    """ Get string to separate output when printing output for multiple items.
+
+    Parameters
+    ----------
+    char: str
+        The character that will be printed repeatedly.
+    n_chars: int
+        The number of times to repeat `char`. We expect that `char` is a
+        single character so this will be the total line length.
+    newlines_before: int
+        Number of newline characters to add before the spacer.
+    newlines_after: int
+        Number of newline characters to add after the spacer.
+
+    Returns
+    -------
+    str
+    """
+    return '\n'*newlines_before + char * n_chars + '\n'*newlines_after
+
+
 def kwargs_fallback(self, *args, assign=False, **kwargs):
     """Use inside a method that accepts **kwargs. Sometimes we want to use
     an instance variable for some computation but want to give the user the
