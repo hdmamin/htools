@@ -121,6 +121,20 @@ class FuzzyKeyDict(dict):
         return [p[0] for p in pairs]
 
 
+class DotDict(dict):
+    """Dictionary that allows use of dot notation as well as bracket notation.
+    """
+
+    def __getattr__(self, k):
+        return self[k]
+
+    def __setattr__(self, k, v):
+        self[k] = v
+
+    def __delattr__(self, k):
+        del self[k]
+
+
 class LambdaDict(UserDict):
     """Create a default dict where the default function can accept parameters.
     Whereas the defaultdict in Collections can set the default as int or list,

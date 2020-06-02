@@ -905,7 +905,7 @@ def max_key(d, fn=identity):
     return max(d.items(), key=lambda x: fn(x[1]))[0]
 
 
-def fgrep(text, term, window=25):
+def fgrep(text, term, window=25, with_idx=False, reverse=False):
     """Search a string for a given term. If found, print it with some context.
     Similar to `grep -C 1 term text`. `fgrep` is short for faux grep.
 
@@ -917,16 +917,23 @@ def fgrep(text, term, window=25):
         Term to look for in text.
     window: int
         Number of characters to display before and after the matching term.
+    with_idx: bool
+        If True, return index as well as string.
+    reverse: bool
+        If True, reverse search direction (find last match rather than first).
 
     Returns
     -------
-    str: The desired term and its surrounding context. If the term isn't
-    present, an empty string is returned.
+    str or tuple[int, str]: The desired term and its surrounding context.
+        If the term isn't present, an empty string is returned. If
+        with_idx=True, a tuple of (match index, string with text) is returned.
     """
-    idx = text.find(term)
+    idx = text.rfind(term) if reverse else text.find(term)
     if idx == -1:
-        return ''
-    return text[max(idx-window, 0):idx+window]
+        res = ''
+    else:
+        res = text[max(idx-window, 0):idx+window]
+    return (idx, res) if with_idx else res
 
 
 def spacer(char='-', n_chars=79, newlines_before=1, newlines_after=1):
