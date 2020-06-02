@@ -1,6 +1,7 @@
 from bz2 import BZ2File
 from collections import Counter, Sequence, Iterable, \
     Mapping
+from functools import partial
 import gc
 from email.mime.text import MIMEText
 import inspect
@@ -903,6 +904,34 @@ def max_key(d, fn=identity):
     A key from dict `d`.
     """
     return max(d.items(), key=lambda x: fn(x[1]))[0]
+
+
+def is_builtin(x, drop_callables=True):
+    """Check if an object is a Python built-in object.
+
+    Parameters
+    ----------
+    x: object
+    drop_callables: bool
+        If True, return False for callables (basically functions, methods, or
+        classes). These typically will return True otherwise since they are of
+        class `type` or `builtin_function_or_method`.
+
+    Returns
+    -------
+    bool: True if `x` is a built-in object, False otherwise.
+    """
+    def _builtin(x, drop_callables):
+        if callable(x) and drop_callables:
+            return False
+        return x.__class__.__module__ == 'builtins'
+    builtin = partial(_builtin, drop_callables=drop_callables)
+    # Check mapping before iterable because mappings are iterable.
+    if isinstance(x, Mapping):
+        return builtin(x) and all(builtin(o) for o in flatten(x.items()))
+    elif isinstance(x, Iterable):
+        return builtin(x) and all(builtin(o) for o in flatten(x))
+    return builtin(x)
 
 
 def fgrep(text, term, window=25, with_idx=False, reverse=False):
