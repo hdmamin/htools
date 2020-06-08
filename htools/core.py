@@ -926,12 +926,32 @@ def is_builtin(x, drop_callables=True):
             return False
         return x.__class__.__module__ == 'builtins'
     builtin = partial(_builtin, drop_callables=drop_callables)
-    # Check mapping before iterable because mappings are iterable.
+    # Check mapping first because mappings are iterable.
     if isinstance(x, Mapping):
         return builtin(x) and all(builtin(o) for o in flatten(x.items()))
     elif isinstance(x, Iterable):
         return builtin(x) and all(builtin(o) for o in flatten(x))
     return builtin(x)
+
+
+def hashable(x):
+    """Check if an object is hashable. Hashable objects will usually be
+    immutable though this is not guaranteed.
+
+    Parameters
+    ----------
+    x: object
+        The item to check for hashability.
+
+    Returns
+    -------
+    bool: True if `x` is hashable (suggesting immutability), False otherwise.
+    """
+    try:
+        _ = hash(x)
+        return True
+    except TypeError:
+        return False
 
 
 def fgrep(text, term, window=25, with_idx=False, reverse=False):

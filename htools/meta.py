@@ -146,6 +146,114 @@ def auto_repr(cls):
     return cls
 
 
+def delegate(attr, iter_magics=False, skip=(), getattr_=True):
+    """Decorator that automatically delegates attribute calls to an attribute
+    of the class. This is a nice convenience to have when using composition.
+    User can also choose to delegate magic methods related to iterables.
+
+    Note: I suspect this could lead to some unexpected behavior so be careful
+    using this in production.
+
+    Parameters
+    ----------
+    attr: str
+        Name of variable to delegate to.
+    iter_magics: bool
+        If True, delegate the standard magic methods related to iterables:
+        '__getitem__', '__setitem__', '__delitem__', and '__len__'.
+    skip: Iterable[str]
+        Can optionally provide a list of iter_magics to skip. This only has
+        an effect when `iter_magics` is True. For example, you may want to be
+        able to iterate over the class but no allow item deletion. In this case
+        you should pass skip=('__delitem__').
+    getattr_: bool
+        If True, delegate non-magic methods. This means that if you try to
+        access an attribute or method that the object produced by the decorated
+        class does not have, it will look for it in the delegated object.
+
+    Examples
+    --------
+    Example 1: We can use BeautifulSoup methods like `find_all` directly on
+    the Page object. Most IDEs should let us view quick documentation as well.
+
+    @delegate('soup')
+    class Page:
+        def __init__(self, url, logfile, timeout):
+            self.soup = self.fetch(url, timeout=timeout)
+        ...
+
+    page = Page('http://www.coursera.org')
+    page.find_all('div')
+
+    Example 2: Magic methods except for __delitem__ are delegated.
+
+    @delegate('data', True, skip=('__delitem__'))
+    class Foo:
+        def __init__(self, data, city):
+            self.data = data
+            self.city = city
+
+    >>> f = Foo(['a', 'b', 'c'], 'San Francisco')
+    >>> len(f)
+    3
+
+    >>> for char in f:
+    >>>     print(char)
+    a
+    b
+    c
+
+    >>> f.append(3); f.data
+    ['a', 'b', 'c', 3]
+
+    >>> del f[0]
+    TypeError: 'Foo' object doesn't support item deletion
+
+    >>> f.clear(); f.data
+    []
+    """
+    def wrapper(cls):
+        def _delegate(self, attr):
+            """Helper that retrieves object that an instance delegates to."""
+            return getattr(self, attr)
+
+        # Any missing attribute will be delegated.
+        if getattr_:
+            def _getattr(self, new_attr):
+                return getattr(_delegate(self, attr), new_attr)
+
+            cls.__getattr__ = _getattr
+
+        # If specified, delegate magic methods to make cls iterable.
+        if iter_magics:
+            if '__getitem__' not in skip:
+                def _getitem(self, i):
+                    return _delegate(self, attr)[i]
+
+                setattr(cls, '__getitem__', _getitem)
+
+            if '__setitem__' not in skip:
+                def _setitem(self, i, val):
+                    _delegate(self, attr)[i] = val
+
+                setattr(cls, '__setitem__', _setitem)
+
+            if '__delitem__' not in skip:
+                def _delitem(self, i):
+                    del _delegate(self, attr)[i]
+
+                setattr(cls, '__delitem__', _delitem)
+
+            if '__len__' not in skip:
+                def _len(self):
+                    return len(_delegate(self, attr))
+
+                setattr(cls, '__len__', _len)
+        return cls
+
+    return wrapper
+
+
 class LoggerMixin:
     """Mixin class that configures and returns a logger.
 
@@ -173,13 +281,19 @@ class LoggerMixin:
             If left as None, logging will only be to stdout.
         fmode: str
             Logging mode when using a log file. Default 'a' for
-            'append'. 'w' will overwrite the previously logged messages.
+            'append'. 'w' will overwrite the previously logged messages. Note:
+            this only affects what happens when we create a new logger ('w'
+            will remove any existing text in the log file if it exists, while
+            'a' won't. But calling `logger.info(my_msg)` twice in a row with
+            the same logger will always result in two new lines, regardless of
+            mode.
         level: str
             Minimum level necessary to log messages.
             One of ('debug', 'info', 'warning', 'error')
         fmt: str
-            Format that will be used for logging messages. The logging
-            module has a specific
+            Format that will be used for logging messages. This uses the
+            logging module's formatting language, not standard Python string
+            formatting.
 
         Returns
         -------
@@ -202,6 +316,72 @@ class LoggerMixin:
             handler.setFormatter(formatter)
             logger.addHandler(handler)
         return logger
+
+
+@delegate('logger')
+class MultiLogger(LoggerMixin):
+    """Easy way to get a pre-configured logger. This can also be used to
+    record stdout, either through the context manager provided by contextlib
+    or the function decorator defined in this module.
+
+    It delegates to its logger and should be used as follows when explicitly
+    called by the user:
+
+    logger = MultiLogger('train.log')
+    logger.info('Starting model training.')
+
+    Notice we call the `info` method rather than `write`.
+    """
+
+    def __init__(self, path, fmode='w', fmt='%(message)s'):
+        """
+        Parameters
+        ----------
+        path: str or Path
+            The log file to save to. If None is provided, will only log to
+            stdout.
+        fmode: str
+            One of ('a', 'w'). See `LoggerMixin` docstring: this only affects
+            behavior on the first write.
+        fmt: str
+            Message format. See `LoggerMixin` docstring for details.
+        """
+        self.logger = self.get_logger(path, fmode, 'info', fmt)
+
+    def write(self, buf):
+        """Provided for compatibility with `redirect_stdout` to allow logging
+        of stdout while still printing it to the screen. The user should never
+        call this directly.
+        """
+        if buf != '\n':
+            self.logger.info(buf)
+
+
+def verbose_log(path, fmode='w', fmt='%(message)s'):
+    """Decorator to log stdout to a file while also printing it to the screen.
+    Commonly used for model training.
+
+    Parameters
+    ----------
+    path: str or Path
+        Log file.
+    fmode: str
+        One of ('a', 'w') for 'append' mode or 'write' mode. Note that 'w' only
+        overwrites the existing file once when the decorated function is
+        defined: subsequent calls to the function will not overwrite previously
+        logged content.
+    fmt: str
+        String format for logging messages. Uses formatting specific to
+        `logging` module, not standard Python string formatting.
+    """
+    def decorator(func):
+        logger = MultiLogger(path, fmode, fmt)
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with redirect_stdout(logger):
+                return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class SaveableMixin:
@@ -1268,114 +1448,6 @@ def wrapmethods(*decorators, methods=(), internals=False):
                 f = d(f)
             setattr(cls, attr, final_wrapper(f))
         return cls
-    return wrapper
-
-
-def delegate(attr, iter_magics=False, skip=(), getattr_=True):
-    """Decorator that automatically delegates attribute calls to an attribute
-    of the class. This is a nice convenience to have when using composition.
-    User can also choose to delegate magic methods related to iterables.
-
-    Note: I suspect this could lead to some unexpected behavior so be careful
-    using this in production.
-
-    Parameters
-    ----------
-    attr: str
-        Name of variable to delegate to.
-    iter_magics: bool
-        If True, delegate the standard magic methods related to iterables:
-        '__getitem__', '__setitem__', '__delitem__', and '__len__'.
-    skip: Iterable[str]
-        Can optionally provide a list of iter_magics to skip. This only has
-        an effect when `iter_magics` is True. For example, you may want to be
-        able to iterate over the class but no allow item deletion. In this case
-        you should pass skip=('__delitem__').
-    getattr_: bool
-        If True, delegate non-magic methods. This means that if you try to
-        access an attribute or method that the object produced by the decorated
-        class does not have, it will look for it in the delegated object.
-
-    Examples
-    --------
-    Example 1: We can use BeautifulSoup methods like `find_all` directly on
-    the Page object. Most IDEs should let us view quick documentation as well.
-
-    @delegate('soup')
-    class Page:
-        def __init__(self, url, logfile, timeout):
-            self.soup = self.fetch(url, timeout=timeout)
-        ...
-
-    page = Page('http://www.coursera.org')
-    page.find_all('div')
-
-    Example 2: Magic methods except for __delitem__ are delegated.
-
-    @delegate('data', True, skip=('__delitem__'))
-    class Foo:
-        def __init__(self, data, city):
-            self.data = data
-            self.city = city
-
-    >>> f = Foo(['a', 'b', 'c'], 'San Francisco')
-    >>> len(f)
-    3
-
-    >>> for char in f:
-    >>>     print(char)
-    a
-    b
-    c
-
-    >>> f.append(3); f.data
-    ['a', 'b', 'c', 3]
-
-    >>> del f[0]
-    TypeError: 'Foo' object doesn't support item deletion
-
-    >>> f.clear(); f.data
-    []
-    """
-    def wrapper(cls):
-        def _delegate(self, attr):
-            """Helper that retrieves object that an instance delegates to."""
-            return getattr(self, attr)
-
-        # Any missing attribute will be delegated.
-        if getattr_:
-            def _getattr(self, new_attr):
-                return getattr(_delegate(self, attr), new_attr)
-
-            cls.__getattr__ = _getattr
-
-        # If specified, delegate magic methods to make cls iterable.
-        if iter_magics:
-            if '__getitem__' not in skip:
-                def _getitem(self, i):
-                    return _delegate(self, attr)[i]
-
-                setattr(cls, '__getitem__', _getitem)
-
-            if '__setitem__' not in skip:
-                def _setitem(self, i, val):
-                    _delegate(self, attr)[i] = val
-
-                setattr(cls, '__setitem__', _setitem)
-
-            if '__delitem__' not in skip:
-                def _delitem(self, i):
-                    del _delegate(self, attr)[i]
-
-                setattr(cls, '__delitem__', _delitem)
-
-            if '__len__' not in skip:
-                def _len(self):
-                    return len(_delegate(self, attr))
-
-                setattr(cls, '__len__', _len)
-        return cls
-
     return wrapper
 
 
