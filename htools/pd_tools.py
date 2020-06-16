@@ -513,3 +513,28 @@ def anti_join(df_left, df_right, left_on=None, right_on=None, **kwargs):
                            suffixes=['', '_rhs'], **kwargs)
     return merged.loc[merged.XX_RHS_XX.isnull(), df_left.columns]
 
+
+def highlight_rows(row, fn, highlight_color='yellow', default_color='white'):
+    """Use with pd.style.apply to highlight certain rows. `row` will be passed
+    automatically through the pandas method.
+
+    Parameters
+    ----------
+    row: row of a pandas DataFrame
+        Never passed in manually by user.
+    fn: function
+        Takes row as input and returns True if it should be highlighted, False
+        otherwise.
+    highlight_color: str
+        Color to display highlighted rows in.
+    default_color: str
+        Color to display un-highlighted rows in.
+
+    Examples
+    --------
+    highlight_shared = partial(highlight_rows, fn=lambda x: x.cat in names)
+    df.style.apply(highlight_shared, axis=1)
+    """
+    color = highlight_color if fn(row) else default_color
+    return [f'background-color: {color}'] * len(row.values)
+

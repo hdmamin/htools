@@ -10,6 +10,7 @@ from pathlib import Path
 import signal
 import sys
 import time
+from tqdm.auto import tqdm
 import types
 import warnings
 from weakref import WeakSet
@@ -153,6 +154,9 @@ def delegate(attr, iter_magics=False, skip=(), getattr_=True):
 
     Note: I suspect this could lead to some unexpected behavior so be careful
     using this in production.
+
+    KNOWN ISSUE: Max recursion error when a class inherits from nn.Module and
+    delegates to the actual model.
 
     Parameters
     ----------
@@ -406,7 +410,7 @@ class SaveableMixin:
         save(self, path)
 
     @classmethod
-    def load(self, path):
+    def load(cls, path):
         """Load object from pickle file.
 
         Parameters
@@ -746,19 +750,22 @@ def timebox_handler(time, frame):
 
 
 @contextmanager
-def timebox(time, strict=True):
+def timebox(seconds, strict=True, freq=.1):
     """Try to execute code for specified amount of time before throwing error.
     If you don't want to throw an error, use with a try/except block.
 
     Parameters
     ----------
-    time: int
-        Max number of seconds before throwing error.
+    seconds: float
+        Max number of seconds before throwing error. This will be enforced with
+        a relatively low level of precision.
     strict: bool
         If True, timeout will cause an error to be raised, halting execution of
         the entire program. If False, a warning message will be printed and
         the timeboxed operation will end, letting the program proceed to the
         next step.
+    freq: float
+        How often to update progress bar (measured in seconds).
 
     Examples
     --------
@@ -773,30 +780,44 @@ def timebox(time, strict=True):
         except TimeExceededError:
             pass
     """
+
+    def update_custom_pbar(signum, frame):
+        """Handler that is called every `freq` seconds. User never calls this
+        directly.
+        """
+        pbar.update(n=freq)
+        if time.time() - pbar.start_t >= seconds:
+            raise TimeExceededError('Time limit exceeded.')
+
+    pbar = tqdm(total=seconds, bar_format='{l_bar}{bar}|{n:.2f}/{total:.1f}s')
     try:
-        signal.signal(signal.SIGALRM, timebox_handler)
-        signal.alarm(time)
+        signal.signal(signal.SIGALRM, update_custom_pbar)
+        signal.setitimer(signal.ITIMER_REAL, freq, freq)
         yield
     except TimeExceededError as e:
         if strict: raise
         warnings.warn(e.args[0])
     finally:
+        pbar.close()
         signal.alarm(0)
 
 
-def timeboxed(time, strict=True):
+def timeboxed(time, strict=True, freq=.1):
     """Decorator version of timebox. Try to execute decorated function for
     `time` seconds before throwing exception.
 
     Parameters
     ----------
-    time: int
-        Max number of seconds before throwing error.
+    time: float
+        Max number of seconds before throwing error. This will be enforced with
+        a relatively low level of precision.
     strict: bool
         If True, timeout will cause an error to be raised, halting execution of
         the entire program. If False, a warning message will be printed and
         the timeboxed operation will end, letting the program proceed to the
         next step.
+    freq: float
+        How often to update the progress bar (measured in seconds).
 
     Examples
     --------
@@ -807,7 +828,7 @@ def timeboxed(time, strict=True):
     def intermediate_wrapper(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            with timebox(time, strict) as tb:
+            with timebox(time, strict, freq) as tb:
                 return func(*args, **kwargs)
         return wrapper
     return intermediate_wrapper
