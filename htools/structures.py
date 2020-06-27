@@ -78,7 +78,7 @@ class FuzzyKeyDict(dict):
     1
     """
 
-    def __init__(self, data=None, limit=3):
+    def __init__(self, data=(), limit=3, return_list=False):
         """
         Parameters
         ----------
@@ -88,13 +88,12 @@ class FuzzyKeyDict(dict):
         limit: int
             Number of similar keys to find when trying to retrieve the value
             for a missing key.
+        return_list: bool
+            If True, __getitem__ will always return a list of len `limit`. If
+            False, it will return a key's corresponding value if it's present
+            and a list of values for the `limit` closest keys if it's not.
         """
-        if isinstance(data, Mapping):
-            for k, v in data.items():
-                self[k] = v
-        elif isinstance(data, Iterable):
-            for k, v in data:
-                self[k] = v
+        super().__init__(data)
         self.limit = limit
 
     def __getitem__(self, key):
@@ -109,14 +108,35 @@ class FuzzyKeyDict(dict):
             the missing key in.
         """
         try:
-            return super().__getitem__(key)
+            res = super().__getitem__(key)
+            return [res]*self.limit if self.return_list else res
         except KeyError:
-            return [self[k] for k in self.similar_keys(key)]
+            # super().__getitem__ fails for some reason in this case.
+            return [dict.__getitem__(self, k) for k in self.similar_keys(key)]
 
-    def similar_keys(self, key, return_distances=False):
+    def similar_keys(self, key, return_similarities=False):
+        """Find the keys in the dictionary that are most similar to the given
+        key.
+
+        Parameters
+        ----------
+        key: str
+            This can be present or missing from the dictionary, though in
+            practice it's often more useful when it's missing. We'll search
+            the existing keys and find the strings that are most similar.
+        return_similarities: bool
+            If True, return a list of tuples where the first item is a key and
+            the second item is its similarity to the given key (higher means
+            more similar).
+
+        Returns
+        -------
+        list: Either a list of strings or a list of tuples depending on
+            `return_similarities`.
+        """
         pairs = process.extract(key, self.keys(), limit=self.limit,
                                 scorer=fuzz.ratio)
-        if return_distances:
+        if return_similarities:
             return pairs
         return [p[0] for p in pairs]
 
