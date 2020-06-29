@@ -95,6 +95,7 @@ class FuzzyKeyDict(dict):
         """
         super().__init__(data)
         self.limit = limit
+        self.return_list = return_list
 
     def __getitem__(self, key):
         """
@@ -111,8 +112,9 @@ class FuzzyKeyDict(dict):
             res = super().__getitem__(key)
             return [res]*self.limit if self.return_list else res
         except KeyError:
-            # super().__getitem__ fails for some reason in this case.
-            return [dict.__getitem__(self, k) for k in self.similar_keys(key)]
+            # super() needs arguments passed explicitly in list comprehension.
+            return [super(FuzzyKeyDict, self).__getitem__(k)
+                    for k in self.similar_keys(key)]
 
     def similar_keys(self, key, return_similarities=False):
         """Find the keys in the dictionary that are most similar to the given
