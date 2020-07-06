@@ -926,7 +926,6 @@ class ReadOnly:
     """
 
     def __init__(self):
-        # self.name = None
         self.initialized = WeakSet()
 
     def __set_name__(self, owner, name):
