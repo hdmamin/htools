@@ -379,9 +379,10 @@ def verbose_log(path, fmode='w', fmt='%(message)s'):
         `logging` module, not standard Python string formatting.
     """
     def decorator(func):
-        logger = MultiLogger(path, fmode, fmt)
         @wraps(func)
         def wrapper(*args, **kwargs):
+            fn_locals = bound_args(func, args, kwargs, True)
+            logger = MultiLogger(path.format(**fn_locals), fmode, fmt)
             with redirect_stdout(logger):
                 return func(*args, **kwargs)
         return wrapper

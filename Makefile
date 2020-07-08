@@ -4,6 +4,6 @@ dist:
 	rm -rf dist/*
 	python setup.py sdist
 
-pypi:
+pypi: dist
 	twine upload dist/*
 
