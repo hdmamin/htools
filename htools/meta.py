@@ -751,7 +751,7 @@ def timebox_handler(time, frame):
 
 
 @contextmanager
-def timebox(seconds, strict=True, freq=.1):
+def timebox(seconds, strict=True, freq=.1, cleanup=True):
     """Try to execute code for specified amount of time before throwing error.
     If you don't want to throw an error, use with a try/except block.
 
@@ -767,6 +767,10 @@ def timebox(seconds, strict=True, freq=.1):
         next step.
     freq: float
         How often to update progress bar (measured in seconds).
+    cleanup: bool
+        If True, progress bar will disappear on function end. This is nice if
+        we're calling the decorated function inside a loop and don't want
+        hundreds of progress bars littering the notebook/terminal.
 
     Examples
     --------
@@ -790,7 +794,8 @@ def timebox(seconds, strict=True, freq=.1):
         if time.time() - pbar.start_t >= seconds:
             raise TimeExceededError('Time limit exceeded.')
 
-    pbar = tqdm(total=seconds, bar_format='{l_bar}{bar}|{n:.2f}/{total:.1f}s')
+    pbar = tqdm(total=seconds, bar_format='{l_bar}{bar}|{n:.2f}/{total:.1f}s',
+                leave=not cleanup)
     try:
         signal.signal(signal.SIGALRM, update_custom_pbar)
         signal.setitimer(signal.ITIMER_REAL, freq, freq)
