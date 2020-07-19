@@ -1528,6 +1528,46 @@ def timer(func):
     return wrapper
 
 
+def handle(func=None, default=None):
+    """Decorator that provides basic error handling. This is a rare decorator
+    that is often most useful without the syntactic sugar: for instance,
+    we may have a pre-existing function and want to apply it to a pandas Series
+    while handling errors. See `Examples`.
+
+    Parameters
+    ----------
+    func: callable
+        The function to decorate.
+    default: any
+        This is the value that will be returned when the wrapped function
+        throws an error.
+
+    Examples
+    --------
+    There are a few different ways to use this function:
+
+    @handle
+    def func():
+        # Do something
+
+    @handle(default=0)
+    def func():
+        # Do something
+
+    def some_func(x):
+        # Do something
+    df.name.apply(handle(some_func))
+    """
+    if not func: return partial(handle, default=default)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            return default
+    return wrapper
+
+
 @contextmanager
 def block_timer():
     """Context manager to time a block of code. This works similarly to @timer
