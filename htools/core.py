@@ -833,9 +833,9 @@ def lmap(fn, *args):
     return list(map(fn, args))
 
 
-def attrmap(attr, *args):
+def amap(attr, *args):
     """More convenient syntax for quick data exploration. Get an attribute
-    value for multiple objects.
+    value for multiple objects. Name is short for "attrmap".
 
     Parameters
     ----------
@@ -854,11 +854,11 @@ def attrmap(attr, *args):
     df2 = pd.DataFrame(np.random.randint(0, 3, (4, 5)))
     df3 = pd.DataFrame(np.random.randint(0, 3, (2, 3)))
 
-    >>> attrmap('shape', df1, df2, df3)
+    >>> amap('shape', df1, df2, df3)
     [(4, 5), (4, 5), (2, 3)]
 
     net = nn.Sequential(...)
-    >>> attrmap('shape', *net.parameters())
+    >>> amap('shape', *net.parameters())
     [torch.Size([5, 3]),
      torch.Size([16, 4]),
      torch.Size([16, 3]),
