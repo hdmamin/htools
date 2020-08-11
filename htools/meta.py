@@ -872,7 +872,6 @@ class cached_property:
 
     # Second call accesses attribute without re-computing
     # (notice no "Building matrix" message).
-    >>> v = Vocab(tokens)
     >>> v.embedding_matrix
 
     [[.03, .5, .22, .01],

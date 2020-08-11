@@ -867,6 +867,22 @@ def amap(attr, *args):
     return [getattr(arg, attr) for arg in args]
 
 
+def smap(*x):
+    """Get shape of each array/tensor in a list or tuple.
+
+    Parameters
+    ----------
+    *x: np.arrays or torch.tensors
+        We use star unpacking here to create a consistent interface with amap()
+        and lmap().
+
+    Returns
+    -------
+    list: Shape of each array/tensor in input.
+    """
+    return amap('shape', x)
+
+
 def identity(x):
     """Returns the input argument. Sometimes it is convenient to have this if
     we sometimes apply a function to an item: rather than defining a None
