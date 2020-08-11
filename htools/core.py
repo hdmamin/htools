@@ -880,7 +880,7 @@ def smap(*x):
     -------
     list: Shape of each array/tensor in input.
     """
-    return amap('shape', x)
+    return amap('shape', *x)
 
 
 def identity(x):
