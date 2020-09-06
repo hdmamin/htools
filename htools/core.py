@@ -1023,6 +1023,53 @@ def spacer(char='-', n_chars=79, newlines_before=1, newlines_after=1):
     return '\n'*newlines_before + char * n_chars + '\n'*newlines_after
 
 
+def snake2camel(text):
+    """Convert snake case to camel case. This assumes the input is valid snake
+    case (if you have some weird hybrid of snake and camel case, for instance,
+    you'd want to do some preprocessing first).
+
+    Parameters
+    ----------
+    text: str
+        Snake case string, e.g. vader_sentiment_score.
+
+    Returns
+    -------
+    str: `text` converted to camel case, e.g. vaderSentimentScore.
+    """
+    res = []
+    prev = ''
+    for char in text:
+        if char != '_':
+            # Check if res is empty because of case with leading underscore.
+            res.append(char.upper() if prev == '_' and res else char)
+        prev = char
+    return ''.join(res)
+
+
+def camel2snake(text):
+    """Convert camel case to snake case. This assumes the input is valid camel
+    case (if you have some weird hybrid of camel and snake case, for instance,
+    you'd want to do some preprocessing first).
+
+    Parameters
+    ----------
+    text: str
+        Camel case string, e.g. vaderSentimentScore.
+
+    Returns
+    -------
+    str: `text` converted to snake case, e.g. vader_sentiment_score.
+    """
+    res = []
+    for char in text:
+        if char.islower():
+            res.append(char)
+        else:
+            res.extend(['_', char.lower()])
+    return ''.join(res)
+
+
 def kwargs_fallback(self, *args, assign=False, **kwargs):
     """Use inside a method that accepts **kwargs. Sometimes we want to use
     an instance variable for some computation but want to give the user the
