@@ -155,8 +155,10 @@ def delegate(attr, iter_magics=False, skip=(), getattr_=True):
     Note: I suspect this could lead to some unexpected behavior so be careful
     using this in production.
 
-    KNOWN ISSUE: Max recursion error when a class inherits from nn.Module and
+    KNOWN ISSUES:
+    -Max recursion error when a class inherits from nn.Module and
     delegates to the actual model.
+    -Causes pickling issues at times. Haven't figured out cause yet.
 
     Parameters
     ----------

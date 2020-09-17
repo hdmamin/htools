@@ -678,7 +678,7 @@ class BasicPipeline:
     with optional debugging output.
     """
 
-    def  __init__(self, *funcs):
+    def __init__(self, *funcs):
         """
         Parameters
         ----------

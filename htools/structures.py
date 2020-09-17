@@ -1,4 +1,4 @@
-from collections import namedtuple, Iterable, Mapping, UserDict
+from collections import namedtuple, UserDict
 from fuzzywuzzy import fuzz, process
 
 

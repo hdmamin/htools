@@ -308,13 +308,23 @@ def vcounts(df_col, **kwargs):
 
 @pf.register_series_method
 @pf.register_dataframe_method
-def pprint(df):
+def pprint(df, truncate_text=True):
     """Display a dataframe of series as a rendered HTML table in
     Jupyter notebooks. Useful when printing multiple outputs in a cell.
+
+    Parameters
+    ----------
+    truncate_text: bool
+        If True, long strings will be truncated to maintain a reasonable
+        row height. If False, the whole string will be displayed, which can
+        results in massive outputs.
     """
     if isinstance(df, pd.core.series.Series):
         df = pd.DataFrame(df)
-    display(HTML(df.to_html()))
+    if truncate_text:
+        display(df)
+    else:
+        display(HTML(df.to_html()))
 
 
 @pf.register_series_method
