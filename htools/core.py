@@ -710,7 +710,7 @@ class BasicPipeline:
         return x
 
     def __repr__(self):
-        return f'BasicPipeline({", ".join(name(f) for f in self.funcs)})'
+        return f'BasicPipeline({", ".join(func_name(f) for f in self.funcs)})'
 
 
 def pipe(x, *funcs, verbose=False, attr=''):
@@ -1023,22 +1023,29 @@ def spacer(char='-', n_chars=79, newlines_before=1, newlines_after=1):
     return '\n'*newlines_before + char * n_chars + '\n'*newlines_after
 
 
-def name(func):
+def func_name(func):
     """Usually just returns the name of a function. The difference is this is
     compatible with functools.partial, which otherwise makes __name__
     inaccessible.
 
     Parameters
     ----------
-    func: function or partial
+    func: callable
+        Can be a function, partial, or callable class.
     """
+
+    assert callable(func), 'Input must be callable.'
+
     try:
-        return func.__name__
+        res = func.__name__
     except AttributeError:
         if isinstance(func, partial):
-            return name(func.func)
+            return func_name(func.func)
+        else:
+            return func.__class__.__name__
     except Exception as e:
         raise e
+    return res
 
 
 def snake2camel(text):
