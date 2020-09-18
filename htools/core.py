@@ -685,7 +685,9 @@ class BasicPipeline:
         *funcs: function(s)
             One or more functions to apply in the specified order.
         """
-        self.funcs = funcs
+        # Make `funcs` mutable. Could use @htools.meta.delegate('funcs')
+        # but not sure if that would cause circular import issues. Check later.
+        self.funcs = list(funcs)
 
     def __call__(self, x, verbose=False, attr=''):
         """Apply the pipeline of functions to x.
