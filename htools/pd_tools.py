@@ -5,6 +5,10 @@ import operator
 import pandas as pd
 import pandas_flavor as pf
 from sklearn.model_selection import KFold
+import warnings
+
+
+warnings.filterwarnings('ignore')
 
 
 @pf.register_series_method
@@ -216,7 +220,7 @@ def target_encode(df, x, y, n=5, stat='mean', shuffle=True, state=None,
         key = row[0] if len(x) == 1 else tuple(row)
         return enc.get(key, global_agg)
 
-    #  Compute target encoding on n-1 folds and map back to nth fold.
+    # Compute target encoding on n-1 folds and map back to nth fold.
     for train_idx, val_idx in KFold(n, shuffle, state).split(df):
         enc = getattr(df.iloc[train_idx, :].groupby(x)[y], stat)()
         mapped = df.loc[:, x].iloc[val_idx].apply(indexer, axis=1)
@@ -547,4 +551,7 @@ def highlight_rows(row, fn, highlight_color='yellow', default_color='white'):
     """
     color = highlight_color if fn(row) else default_color
     return [f'background-color: {color}'] * len(row.values)
+
+
+warnings.filterwarnings('default')
 

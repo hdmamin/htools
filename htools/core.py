@@ -799,8 +799,7 @@ def item(it, random=True, try_values=True):
     any: An item from the iterable.
     """
     if try_values and hasattr(it, 'values'): it = it.values()
-    if random:
-        return choice(list(it))
+    if random: return choice(list(it))
     return next(iter(it))
 
 
@@ -901,6 +900,24 @@ def identity(x):
     x: Unchanged input.
     """
     return x
+
+
+def ifnone(arg, backup):
+    """Shortcut to provide a backup value if an argument is None. Commonly used
+    for numpy arrays since their truthiness is ambiguous.
+
+    Parameters
+    ----------
+    arg: any
+        We will check if this is None.
+    backup: any
+        This will be returned if arg is None.
+
+    Returns
+    -------
+    Either `arg` or `backup` will be returned.
+    """
+    return arg if arg is not None else backup
 
 
 def max_key(d, fn=identity):

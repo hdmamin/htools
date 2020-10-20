@@ -1648,6 +1648,10 @@ def rename_params(func, **old2new):
     `hasarg`. For example, my Incendio library uses parameter names
     to pass the correct arguments to different metrics.
 
+    # TODO: looks like this updates the signature but doesn't actually change
+    the variable names. So you can't call the decorated function with the
+    new argument names.
+
     Parameters
     ----------
     func: function
