@@ -553,5 +553,5 @@ def highlight_rows(row, fn, highlight_color='yellow', default_color='white'):
     return [f'background-color: {color}'] * len(row.values)
 
 
-warnings.filterwarnings('default')
+warnings.resetwarnings()
 

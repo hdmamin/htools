@@ -920,6 +920,29 @@ def ifnone(arg, backup):
     return arg if arg is not None else backup
 
 
+def xor_none(*args, n=1):
+    """Checks that exactly 1 (or n) of inputs is not None. Useful for
+    validating optional function arguments (for example, ensuring the user
+    specifies either a directory name or a list of files but not both.
+
+    Parameters
+    ----------
+    args: any
+    n: int
+        The desired number of non-None elements. Usually 1 but we allow the
+        user to specify other values.
+
+    Returns
+    -------
+    None: This will raise an error if the condition is not satisfied. Do not
+    use this as an if condition (e.g. `if xor_none(a, b): print('success')`.
+    This would always evaluate to False because the function doesn't explicitly
+    return a value so we get None.
+    """
+    if sum(bool(arg is not None) for arg in args) != n:
+        raise ValueError(f'Exactly {n} or args must be not None.')
+
+
 def max_key(d, fn=identity):
     """Find the maximum value in a dictionary and return the associated key.
     If we want to compare values using something other than their numeric
