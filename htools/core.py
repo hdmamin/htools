@@ -3,7 +3,10 @@ from collections import Counter, Sequence, Iterable, \
     Mapping
 from functools import partial
 import gc
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email import encoders
 import inspect
 from itertools import chain
 import json
@@ -115,7 +118,8 @@ def hasarg(func, arg):
     return arg in inspect.signature(func).parameters
 
 
-def quickmail(subject, message, to_email, from_email=None):
+def quickmail(subject, message, to_email, from_email=None, img_path=None,
+              img_name=None, verbose=True):
     """Send an email.
 
     Parameters
@@ -133,28 +137,35 @@ def quickmail(subject, message, to_email, from_email=None):
     --------
     None
     """
-    # Load source email address.
+    # Load email username. Error handling takes place in config functions.
     from_email = from_email or get_default_user()
-    if not from_email:
-        return None
+    if not from_email: return None
 
     # Load email password.
     password = get_credentials(from_email)
-    if not password:
-        return None
+    if not password: return None
 
-    # Create message instance.
-    msg = MIMEText(message)
+    # Create message and add text if specified.
+    msg = MIMEMultipart()
     msg['Subject'] = subject
     msg['From'] = from_email
     msg['To'] = to_email
+    if message: msg.attach(MIMEText(message))
+
+    # Load and attach image.
+    if img_path:
+        with open(img_path, 'rb') as f:
+            img = MIMEImage(f.read(),
+                            name=img_name or os.path.basename(img_path))
+        encoders.encode_base64(img)
+        msg.attach(img)
 
     # Access server and send email.
     server = smtplib.SMTP(host='smtp.gmail.com', port=587)
     server.starttls()
     server.login(user=from_email, password=password)
-    server.send_message(msg)
-    print(f'Email sent to {to_email}.')
+    server.sendmail(from_email, to_email, msg.as_string())
+    if verbose: print(f'Email sent to {to_email}.')
 
 
 def hsplit(text, sep, group=True, attach=True):
