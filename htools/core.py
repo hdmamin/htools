@@ -10,6 +10,7 @@ from email import encoders
 import inspect
 from itertools import chain
 import json
+from multiprocessing import Pool
 import os
 from pathlib import Path
 import pickle
@@ -17,6 +18,7 @@ from random import choice
 import re
 import smtplib
 import sys
+from tqdm.auto import tqdm
 
 from htools.config import get_credentials, get_default_user
 
@@ -893,6 +895,38 @@ def smap(*x):
     list: Shape of each array/tensor in input.
     """
     return amap('shape', *x)
+
+
+def parallelize(func, items, total=None, chunksize=1_000, processes=None):
+    """Apply a function to a sequence of items in parallel. A progress bar
+    is included.
+
+    Parameters
+    ----------
+    func: function
+        This will be applied to each item in `items`.
+    items: Iterable
+        Sequence of items to apply `func` to.
+    total: int or None
+        This defaults to the length of `items`. In the case that items is a
+        generator, this lets us pass in the length explicitly. This lets tdqm
+        know how quickly to advance our progress bar.
+    chunksize: int
+        Positive int that determines the size of chunks submitted to the
+        process pool as separate tasks. Multiprocessing's default is 1 but
+        larger values should speed things up, especially with long sequences.
+    processes: None
+        Optionally set number of processes to run in parallel.
+
+    Returns
+    -------
+
+    """
+    total = total or len(items)
+    with Pool(processes) as p:
+        res = list(tqdm(p.imap(func, items, chunksize=chunksize),
+                        total=total))
+    return res
 
 
 def identity(x):
