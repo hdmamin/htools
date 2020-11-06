@@ -947,6 +947,14 @@ def identity(x):
     return x
 
 
+def always_true(x, *args, **kwargs):
+    """Similar to `identity` but returns True instead of x. I'm tempted to name
+    this `true` but I fear that will cause some horrible bugs where I
+    accidentally use this when I want to use True.
+    """
+    return True
+
+
 def ifnone(arg, backup):
     """Shortcut to provide a backup value if an argument is None. Commonly used
     for numpy arrays since their truthiness is ambiguous.
@@ -963,6 +971,50 @@ def ifnone(arg, backup):
     Either `arg` or `backup` will be returned.
     """
     return arg if arg is not None else backup
+
+
+def listlike(x):
+    """Checks if an object is a list/tuple/set/array etc. Strings and
+    mappings (e.g. dicts) are not considered list-like.
+    """
+    return isinstance(x, Iterable) and not isinstance(x, (str, Mapping))
+
+
+def tolist(x, strict=False):
+    """Helper to let a function accept a single value or a list of values for
+    a certain parameter. See examples.
+
+    Parameters
+    ----------
+    x: Iterable
+        Usually an object that could either be a list/tuple or a primitive,
+        depending on what user passed in.
+    strict: bool
+        If True, returned value will always be a list. If False, we allow
+        tuples/sets/etc. to retain their initial type.
+
+    Returns
+    -------
+    Iterable: list if strict is True or if x is a primitive. If strict is
+    False and x is already a tuple/set/something similar, its type will be
+    retained.
+
+    Examples
+    --------
+    def train(lrs):
+        lrs = tolist(lrs)
+        ...
+
+    >>> train(3e-3)
+    >>> train([3e-4, 3e-3])
+    """
+    if isinstance(x, Mapping):
+        raise ValueError('x must not be a mapping. It should probably be a '
+                         'primitive (str, int, etc.) or a list-like object '
+                         '(tuple, list, set).')
+    elif isinstance(x, Iterable) and not isinstance(x, str):
+        return list(x) if strict else x
+    return [x]
 
 
 def xor_none(*args, n=1):
@@ -1235,7 +1287,9 @@ def kwargs_fallback(self, *args, assign=False, **kwargs):
     """
     res = []
     for arg in args:
-        val = kwargs.get(arg) or getattr(self, arg)
+        # Don't just use `kwargs.get(arg) or ...` because this doesn't work
+        # well when we pass in a numpy array or None.
+        val = kwargs[arg] if arg in kwargs else getattr(self, arg)
         res.append(val)
         if assign: setattr(self, arg, val)
     return res if len(res) > 1 else res[0]
