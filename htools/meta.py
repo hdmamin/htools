@@ -1426,12 +1426,18 @@ def log_cmd(path, mode='a'):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
-            fn_locals = bound_args(func, args, kwargs, True)
-            res = 'python'
-            for arg in sys.argv:
-                pre = ' \\\n\t' if arg.startswith('-') else ' '
-                res += pre+arg
-            save(res+'\n\n', Path(path.format(**fn_locals)), mode)
+            # Don't call when another function imports the wrappped function.
+            # That might be useful for a more general log_signature() function
+            # but here we're specifically looking at command line args. Without
+            # this, I got some undesirable behavior when writing a script that
+            # called another: the new command was overwriting the old log file.
+            if __name__ == '__main__':
+                fn_locals = bound_args(func, args, kwargs, True)
+                res = 'python'
+                for arg in sys.argv:
+                    pre = ' \\\n\t' if arg.startswith('-') else ' '
+                    res += pre+arg
+                save(res+'\n\n', Path(path.format(**fn_locals)), mode)
             return func(*args, **kwargs)
         return wrapped
     return decorator
