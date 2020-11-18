@@ -500,7 +500,7 @@ def verbose_plot(df, nrows=None, **kwargs):
 
 
 def anti_join(df_left, df_right, left_on=None, right_on=None, **kwargs):
-    """
+    """Remove rows present in rhs from lhs.
 
     Parameters
     ----------
