@@ -725,7 +725,12 @@ class BasicPipeline:
         return x
 
     def __repr__(self):
-        return f'BasicPipeline({", ".join(func_name(f) for f in self.funcs)})'
+        # Try to display each item in the form that was likely passed in: for
+        # functions, this is the name, but for callable classes this is
+        # the str representation of the object, not the class itself.
+        names = ',\n\t'.join(str(f) if hasattr(f, '__call__') else func_name(f)
+                             for f in self.funcs)
+        return f'{type(self).__name__}(\n\t{names}\n)'
 
 
 def pipe(x, *funcs, verbose=False, attr=''):
@@ -980,24 +985,37 @@ def listlike(x):
     return isinstance(x, Iterable) and not isinstance(x, (str, Mapping))
 
 
-def tolist(x, strict=False):
+def tolist(x, length_like=None, length=None,
+           error_message='x length does not match desired length.'):
     """Helper to let a function accept a single value or a list of values for
-    a certain parameter. See examples.
+    a certain parameter.
+
+    WARNING: if x is a primitive and you specify a length (either via
+    `length_like` or `length`, the resulting list will contain multiple
+    references to the same item). This is mostly intended for use on lists of
+    floats or ints so I don't think it's a problem, but keep this in mind when
+    considering using this on mutable objects.
 
     Parameters
     ----------
     x: Iterable
-        Usually an object that could either be a list/tuple or a primitive,
-        depending on what user passed in.
-    strict: bool
-        If True, returned value will always be a list. If False, we allow
-        tuples/sets/etc. to retain their initial type.
+        Usually either a list/tuple or a primitive.
+    length_like: None or object
+        If provided, we check that x is the same length. If x is a primitive,
+        we'll make it the same length.
+    length: None or int
+        Similar to `length_like` but lets us specify the desired length
+        directly. `length_like` overrides this, though you should only provide
+        one or the other.
+    error_message: str
+        Displayed in the event that a desired length is specified and x is
+        list-like and does not match that length. You can pass in your own
+        error message if you want something more specific to your current use
+        case.
 
     Returns
     -------
-    Iterable: list if strict is True or if x is a primitive. If strict is
-    False and x is already a tuple/set/something similar, its type will be
-    retained.
+    list
 
     Examples
     --------
@@ -1005,16 +1023,26 @@ def tolist(x, strict=False):
         lrs = tolist(lrs)
         ...
 
+    We can now pass in a single learning rate or multiple.
     >>> train(3e-3)
     >>> train([3e-4, 3e-3])
     """
+    if length_like is not None: length = len(length_like)
+
+    # Case 1. List-like x
+    if listlike(x):
+        if length:
+            assert len(x) == length, error_message
+        return list(x)
+
+    # Case 2. Dict-like x
     if isinstance(x, Mapping):
         raise ValueError('x must not be a mapping. It should probably be a '
                          'primitive (str, int, etc.) or a list-like object '
                          '(tuple, list, set).')
-    elif isinstance(x, Iterable) and not isinstance(x, str):
-        return list(x) if strict else x
-    return [x]
+
+    # Case 3. Primitive x
+    return [x] * (length or 1)
 
 
 def xor_none(*args, n=1):
