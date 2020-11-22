@@ -19,6 +19,7 @@ import re
 import smtplib
 import sys
 from tqdm.auto import tqdm
+import wordninja as wn
 
 from htools.config import get_credentials, get_default_user
 
@@ -1260,6 +1261,49 @@ def camel2snake(text):
         else:
             res.extend(['_', char.lower()])
     return ''.join(res)
+
+
+def to_snake(text):
+    """Experimental feature: tries to convert any common format to snake case.
+    This hasn't been extensively tested but it seems to work with snake case
+    (no change), camel case, upper camel case, words separated by
+    hyphens/dashes/spaces, and combinations of the above. It may occasionally
+    split words that should not be split, though this should be rare if names
+    use actual English words (this might not work so well on fastai-style
+    variable names (very short, e.g. "tfms" for "transforms"), but the intended
+    use case is mostly for fixing column names in pandas.
+
+    Parameters
+    ----------
+    text: str
+
+    Returns
+    -------
+    str: Input text converted to snake case.
+    """
+    return '_'.join(wn.split(text.lower()))
+
+
+def to_camel(text):
+    """Experimental feature: tries to convert any common format to camel case.
+    This hasn't been extensively tested but it seems to work with camel case
+    (no change), snake case, upper camel case, words separated by
+    hyphens/dashes/spaces, and combinations of the above. It may occasionally
+    split words that should not be split, though this should be rare if names
+    use actual English words (this might not work so well on fastai-style
+    variable names (very short, e.g. "tfms" for "transforms"), but the intended
+    use case is mostly for fixing column names in pandas.
+
+    Parameters
+    ----------
+    text: str
+
+    Returns
+    -------
+    str: Input text converted to snake case.
+    """
+    return ''.join(w.title() if i > 0 else w
+                   for i, w in enumerate(wn.split(text.lower())))
 
 
 def kwargs_fallback(self, *args, assign=False, **kwargs):
