@@ -15,7 +15,7 @@ import types
 import warnings
 from weakref import WeakSet
 
-from htools import hdir, load, save, identity
+from htools import hdir, load, save, identity, hasstatic
 
 
 class AutoInit:
@@ -604,6 +604,144 @@ class LazyChainable(metaclass=LazyChainMeta):
     def __repr__(self):
         argstrs = (f'{k}={repr(v)}' for k, v in vars(self).items())
         return f'{type(self).__name__}({", ".join(argstrs)})'
+
+
+class AbstractAttrs(type):
+    """Basically the attribute equivalent of abc.abstractmethod: this allows
+    us to define an abstract parent class that requires its children to
+    possess certain class and/or instance attributes. This differs from
+    abc.abstractproperty in a few ways:
+
+    1. abstractproperty ignores instance attributes. AbstractAttrs lets us
+    specify required instance attributes and/or class attributes and
+    distinguish between the two.
+    2. abstractproperty considers the requirement fulfilled by methods,
+    properties, and class attributes. AbstractAttrs does not allow methods
+    (including classmethods and staticmethods) to fulfill either requirement,
+    though properties can fulfill either.
+
+    Examples
+    --------
+    This class defines required instance attributes and class attributes,
+    but you can also specify one or the other. If you don't care whether an
+    attribute is at the class or instance level, you can simply use
+    @abc.abstractproperty.
+
+    class Parent(metaclass=AbstractAttrs,
+                 inst_attrs=['name', 'metric', 'strategy'],
+                 class_attrs=['order', 'is_val', 'strategy']):
+        pass
+
+    Below, we define a child class that fulfills some but not all requirements.
+
+    class Child(Parent):
+        order = 1
+        metric = 'mse'
+
+        def __init__(self, x):
+            self.x = x
+
+        @staticmethod
+        def is_val(x):
+            ...
+
+        @property
+        def strategy():
+            ...
+
+        def name(self):
+            ...
+
+    More specifically:
+
+    Pass
+    -possesses class attr 'order'
+    -possess attribute 'strategy' (property counts as an instance attribute but
+    not a class attribute. This is consistent with how it can be called:
+    inst.my_property returns a value, cls.my_property returns a property
+    object.)
+
+    Fail
+    -'metric' is a class attribute while our interface requires it to be a
+    class attribute
+    -'name' is a method but it must be an instance attribute
+    -'is_val' is a staticmethod but it must be a class attribute
+    """
+
+    def __new__(cls, name, bases, methods, **meta_kwargs):
+        """This provides user-defined parent classes with an
+        `__init_subclass__` method that checks for class attributes. Errors
+        will occur when the parent class is defined, not when instances of it
+        are constructed.
+        """
+        class_ = type.__new__(cls, name, bases, methods)
+        class_attrs = meta_kwargs.get('class_attrs', [])
+        inst_attrs = meta_kwargs.get('inst_attrs', [])
+
+        def __init_subclass__(cls, **kwargs):
+            super().__init_subclass__(**kwargs)
+            for attr in class_attrs:
+                # TypeError maintains consistency with abstractmethod.
+                # Remaining checks occur at instantiation.
+                if not hasattr(cls, attr):
+                    raise TypeError(f'{cls} must have class attribute '
+                                    f'`{attr}`.')
+
+        # Make sure we distinguish between the abstract parent class that
+        # defines an interface and the child classes that implement it. The
+        # abstract parent should not define the required attributes: it merely
+        # enforces the requirement that its children do. We want the children
+        # to inherit class_attrs and inst_attrs without overwriting them when
+        # their own __new__ is called, so that AbstractAttrs.__call__ can
+        # use them for validation. Only change this if you're very confident
+        # you understand the repercussions.
+        if class_attrs or inst_attrs:
+            class_.__init_subclass__ = classmethod(__init_subclass__)
+            class_._is_parent = True
+            class_.class_attrs = class_attrs
+            class_.inst_attrs = inst_attrs
+        else:
+            class_._is_parent = False
+        return class_
+
+    def __call__(cls, *args, **kwargs):
+        """This is called when we create instances of our classes. Parents are
+        initialized normally, while children undergo a series of checks for
+        each of our required attributes.
+        """
+        inst = cls.__new__(cls, *args, **kwargs)
+        if not isinstance(inst, cls): return inst
+
+        inst.__init__(*args, **kwargs)
+        if cls._is_parent: return inst
+
+        # Validate children.
+        for attr in inst.inst_attrs:
+            # TypeError maintains consistency with abstractmethod.
+            if not hasattr(inst, attr):
+                raise TypeError(f'Instances of {type(inst)} must '
+                                f'have instance attribute `{attr}`.')
+            elif ismethod(getattr(inst, attr)):
+                raise TypeError(f'`{attr}` must be an instance attribute, '
+                                'not a method.')
+
+        # In AbstractAttrs.__new__, methods are still unbound so we couldn't
+        # easily check this until now.
+        for attr in inst.class_attrs:
+            # `ismethod` must check inst, not cls (cls.method is a function
+            # while inst.method is a method). staticmethod can be retrieved
+            # from either.
+            if inspect.ismethod(getattr(inst, attr)) or hasstatic(inst, attr):
+                raise TypeError(f'`{attr}` must be a class attribute, not a '
+                                'method.')
+            # property must be retrieved from cls, not inst.
+            elif isinstance(getattr(cls, attr), property):
+                raise TypeError(
+                    f'`{attr}` must be a class attribute, not a property. '
+                    'Properties fulfill instance attribute requirements but '
+                    'not class attribute requirements.'
+                )
+        return inst
 
 
 def params(func):

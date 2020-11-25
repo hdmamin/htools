@@ -7,7 +7,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
-import inspect
+from inspect import signature, getattr_static
 from itertools import chain
 import json
 from multiprocessing import Pool
@@ -118,7 +118,7 @@ def hasarg(func, arg):
     >>> hasarg(foo, 'c')
     False
     """
-    return arg in inspect.signature(func).parameters
+    return arg in signature(func).parameters
 
 
 def quickmail(subject, message, to_email, from_email=None, img_path=None,
@@ -902,6 +902,26 @@ def smap(*x):
     list: Shape of each array/tensor in input.
     """
     return amap('shape', *x)
+
+
+def hasstatic(cls, meth_name):
+    """Check if a class possesses a staticmethod of a given name. Similar to
+    hasattr
+
+    Parameters
+    ----------
+    cls: Type or any
+        A class or an instance (seems to work on both, though more extensive
+        testing may be needed for more complex scenarios).
+    meth_name: str
+        Name of method to check. If the class/instance does not contain any
+        attribute with this name, function returns False.
+
+    Returns
+    -------
+    bool: True if `cls` has a staticmethod with name `meth_name`.
+    """
+    return isinstance(getattr_static(cls, meth_name, None), staticmethod)
 
 
 def parallelize(func, items, total=None, chunksize=1_000, processes=None):
