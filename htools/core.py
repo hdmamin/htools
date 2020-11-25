@@ -329,7 +329,7 @@ def _read_write_args(path, mode):
         file with.
     """
     ext = path.rpartition('.')[-1]
-    if ext not in {'json', 'pkl', 'txt', 'zip'}:
+    if ext not in {'json', 'pkl', 'zip'}:
         raise InvalidArgumentError(
             'Invalid extension. Make sure your filename ends with '
             '.json, .pkl, or .zip.'
@@ -356,7 +356,8 @@ def save(obj, path, mode_pre='w', verbose=True):
     path: str
         File name to save object to. Should end with .txt, .pkl, .zip, or
         .json depending on desired output format. If .zip is used, object will
-        be zipped and then pickled.
+        be zipped and then pickled. (.sh extension is also allowed and will be
+        treated identically to .txt.)
     mode_pre: str
         Determines whether to write or append text. One of ('w', 'a').
     verbose: bool
@@ -370,7 +371,7 @@ def save(obj, path, mode_pre='w', verbose=True):
     path = Path(path)
     os.makedirs(path.parent, exist_ok=True)
     if verbose: print(f'Writing data to {path}.')
-    if path.suffix == '.txt':
+    if path.suffix[1:] in ('txt', 'sh'):
         with path.open(mode_pre) as f:
             f.write(obj)
     else:
@@ -395,7 +396,7 @@ def load(path, verbose=True):
     object: The Python object that was pickled to the specified file.
     """
     path = Path(path)
-    if path.suffix == '.txt':
+    if path.suffix[1:] in ('txt', 'sh'):
         return path.read_text()
 
     opener, mode, saver = _read_write_args(str(path), 'r')
@@ -926,7 +927,7 @@ def parallelize(func, items, total=None, chunksize=1_000, processes=None):
 
     Returns
     -------
-
+    list
     """
     total = total or len(items)
     with Pool(processes) as p:

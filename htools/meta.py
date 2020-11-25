@@ -1380,7 +1380,7 @@ def return_stdout(func):
     return wrapper
 
 
-def log_cmd(path, mode='a'):
+def log_cmd(path, mode='w'):
     """Decorator that saves the calling command for a python script. This is
     often useful for CLIs that train ML models. It makes it easy to re-run
     the script at a later date with the same or similar arguments.
@@ -1401,7 +1401,7 @@ def log_cmd(path, mode='a'):
     import fire
 
     @log_cmd('logs/training_runs.txt')
-    def train(lr, epochs, dropout, arch, data_version):
+    def train(lr, epochs, dropout, arch, data_version, layer_dims):
         # Train model
 
     if __name__ == '__main__':
@@ -1409,7 +1409,8 @@ def log_cmd(path, mode='a'):
     ```
 
     $ python train.py --lr 3e-3 --epochs 50 --dropout 0.5 --arch awd_lstm \
-        --data_version 1
+        --data_version 1 --layer_dims '[64, 128, 256]' \
+        --dl_kwargs '{"shuffle": False, "drop_last": True}'
 
     After running the script with the above command, the file
     'logs/training_runs.txt' now contains a nicely formatted version of the
@@ -1426,7 +1427,7 @@ def log_cmd(path, mode='a'):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
-            # Don't call when another function imports the wrappped function.
+            # Don't call when another function imports the wrapped function.
             # That might be useful for a more general log_signature() function
             # but here we're specifically looking at command line args. Without
             # this, I got some undesirable behavior when writing a script that
@@ -1435,8 +1436,12 @@ def log_cmd(path, mode='a'):
                 fn_locals = bound_args(func, args, kwargs, True)
                 res = 'python'
                 for arg in sys.argv:
-                    pre = ' \\\n\t' if arg.startswith('-') else ' '
-                    res += pre+arg
+                    res += ' \\\n\t' if arg.startswith('-') else ' '
+                    # Ensure non-primitive kwargs are quoted appropriately.
+                    for start, end in ['[]', '()', '{}']:
+                        if arg.startswith(start) and arg.endswith(end):
+                            arg = f"'{arg}'"
+                    res += arg
                 save(res+'\n\n', Path(path.format(**fn_locals)), mode)
             return func(*args, **kwargs)
         return wrapped
