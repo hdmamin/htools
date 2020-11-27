@@ -1,7 +1,6 @@
 .*
 !.gitignore
 *.pyc
-notebooks/
 htools.egg-info/
 __pycache__/
 data/

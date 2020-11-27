@@ -220,7 +220,10 @@ def delegate(attr, iter_magics=False, skip=(), getattr_=True):
     """
     def wrapper(cls):
         def _delegate(self, attr):
-            """Helper that retrieves object that an instance delegates to."""
+            """Helper that retrieves object that an instance delegates to.
+            Just makes things a little easier to read here so we're not
+            layering getattr calls too deeply.
+            """
             return getattr(self, attr)
 
         # Any missing attribute will be delegated.
