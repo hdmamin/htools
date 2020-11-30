@@ -1417,4 +1417,15 @@ def cd_root(root_subdir='notebooks'):
     print('Current directory:', os.getcwd())
 
 
+def ngrams(word, n=3, step=1, drop_last=False):
+    """To get non-overlapping sequences, pass in same value for `step` as `n`.
+    """
+    stop = max(1, step+len(word)-n)
+    ngrams_ = []
+    for i in range(0, stop, step):
+        ngrams_.append(word[i:i+n])
+    if drop_last and len(ngrams_[-1]) < n: ngrams_ = ngrams_[:-1]
+    return ngrams_
+
+
 SENTINEL = object()
