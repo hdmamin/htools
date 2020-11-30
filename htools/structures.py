@@ -2,7 +2,6 @@ from collections import namedtuple, UserDict
 from datasketch import MinHash, MinHashLSHForest
 from functools import partial
 from fuzzywuzzy import fuzz, process
-from inspect import ismethod
 import numpy as np
 import warnings
 
@@ -74,7 +73,9 @@ class _FuzzyDictBase(dict):
         dict whose metaclass is not ABCMeta. Enforce this manually instead.
         """
         super().__init_subclass__(**kwargs)
-        if not ismethod(getattr(cls, 'similar', None)):
+        # Don't use inspect.ismethod because functions haven't been bound yet.
+        # Not perfect but good enough for this use case.
+        if not callable(getattr(cls, 'similar', None)):
             raise TypeError('Children of _FuzzyDictBase must define method '
                             '`similar`.')
 
