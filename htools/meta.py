@@ -1610,8 +1610,11 @@ def wrapmethods(*decorators, methods=(), internals=False):
 
     def wrapper(cls):
         special_methods = (staticmethod, classmethod)
-        to_wrap = dict.fromkeys(methods, True) if methods \
-            else hdir(cls, False, internals=internals)
+        if methods:
+            to_wrap = dict.fromkeys(methods, True)
+        else:
+            to_wrap = {k: v == 'method' for k, v in
+                       hdir(cls, False, internals=internals).items()}
         for attr, is_method in to_wrap.items():
             f = cls.__dict__[attr]
             if not is_method or isinstance(f, property):
