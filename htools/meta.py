@@ -1863,3 +1863,21 @@ def immutify_defaults(func):
         return res
     return wrapper
 
+
+@contextmanager
+def temporary_global_scope(kwargs):
+    """Make a dict of key-value pairs temporarily available as global vars.
+    Used (at least as of 12/3/20) in `add_kwargs` and `fallback` decorators.
+    The original global variables should be restored after exiting the block.
+    """"
+    old_globals = globals().copy()
+    globals().update(kwargs)
+    try:
+        yield
+    finally:
+        for k in kwargs:
+            if k in old_globals:
+                globals()[k] = old_globals[k]
+            else:
+                del globals()[k]
+
