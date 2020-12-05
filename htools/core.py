@@ -7,7 +7,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
-from inspect import signature, getattr_static, ismethod
+from inspect import signature, getattr_static, ismethod, getmembers, getmodule
 from itertools import chain
 import json
 from multiprocessing import Pool
@@ -904,9 +904,40 @@ def smap(*x):
     return amap('shape', *x)
 
 
+def method_of(meth):
+    """Retrieve the class a method belongs to. This will NOT work on
+    attributes. Also, this won't help if your goal is to retrieve an instance:
+    this returns the type of the instance. Not thoroughly tested but it seems
+    to work regardless of whether you pass in meth from an instance or a class
+    (the output is the same in both cases).
+
+    Parameters
+    ----------
+    meth: MethodType
+        The method to retrieve the class of.
+
+    Returns
+    -------
+    type: The class which defines the method in question.
+
+    Examples
+    --------
+    class Foo:
+        def my_method(self, x):
+            return x*2
+
+    f = Foo()
+    assert method_of(Foo.my_method) == method_of(f.my_method) == Foo
+    """
+    cls, name = meth.__qualname__.split('.')
+    return dict(getmembers(getmodule(meth)))[cls]
+
+
 def hasstatic(cls, meth_name):
     """Check if a class possesses a staticmethod of a given name. Similar to
-    hasattr
+    hasattr. Note that isinstance(cls.meth_name, staticmethod) would always
+    return False: we must use getattr_static or cls.__dict__[meth_name]
+    to potentially return True.
 
     Parameters
     ----------
@@ -922,6 +953,51 @@ def hasstatic(cls, meth_name):
     bool: True if `cls` has a staticmethod with name `meth_name`.
     """
     return isinstance(getattr_static(cls, meth_name, None), staticmethod)
+
+
+def isstatic(meth):
+    """Companion to hasstatic that checks a method itself rather than a class
+    and method name. It does use hasstatic under the hood.
+    """
+    # First check isn't required but I want to avoid reaching the hackier bits
+    # of code if necessary. This catches regular methods and attributes.
+    if ismethod(meth) or not callable(meth): return False
+    parts = getattr(meth, '__qualname__', '').split('.')
+    if len(parts) != 2: return False
+    cls = method_of(meth)
+    return hasstatic(cls, parts[-1])
+
+
+def has_classmethod(cls, meth_name):
+    """Check if a class has a classmethod with a given name.
+    Note that isinstance(cls.meth_name, classmethod) would always
+    return False: we must use getattr_static or cls.__dict__[meth_name]
+    to potentially return True.
+
+    Parameters
+    ----------
+    cls: type or obj
+        This is generally intended to be a class but it should work on objects
+        (class instances) as well.
+    meth_name: str
+        The name of the potential classmethod to check for.
+
+    Returns
+    -------
+    bool: True if cls possesses a classmethod with the specified name.
+    """
+    return isinstance(getattr_static(cls, meth_name), classmethod)
+
+
+def is_classmethod(meth):
+    """Companion to has_classmethod that checks a method itself rather than a
+    class and a method name. It does use has_classmethod under the hood.
+    """
+    if not ismethod(meth): return False
+    parts = getattr(meth, '__qualname__', '').split('.')
+    if len(parts) != 2: return False
+    cls = method_of(meth)
+    return has_classmethod(cls, parts[-1])
 
 
 def parallelize(func, items, total=None, chunksize=1_000, processes=None):
