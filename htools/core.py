@@ -7,7 +7,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email import encoders
-from inspect import signature, getattr_static
+from inspect import signature, getattr_static, ismethod
 from itertools import chain
 import json
 from multiprocessing import Pool

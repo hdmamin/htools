@@ -15,7 +15,7 @@ import types
 import warnings
 from weakref import WeakSet
 
-from htools import hdir, load, save, identity, hasstatic
+from htools import hdir, load, save, identity, hasstatic, tolist, select
 
 
 class AutoInit:
@@ -1880,4 +1880,105 @@ def temporary_global_scope(kwargs):
                 globals()[k] = old_globals[k]
             else:
                 del globals()[k]
+
+
+def fallback(meth=None, *, keep=(), drop=(), save=False):
+    """Make instance/class attributes available as default arguments for a
+    method. Kwargs can be passed in to override one or more of them. You can
+    also choose for kwargs to update the instance attributes if desired.
+
+    When using default values for keep/drop/save, the decorator can be used
+    without parentheses. If you want to change one or more arguments, they
+    must be passed in as keyword args (meth is never explicitly passed in, of
+    course).
+
+    Parameters
+    ----------
+    meth: method
+        The method to decorate. Unlike the other arguments, this is passed in
+        implicitly.
+    keep: Iterable[str] or str
+        Name(s) of instance attributes to include. If you specify a value
+        here, ONLY these instance attributes will be made available as
+        fallbacks. If you don't pass in any value, the default is for all
+        instance attributes to be made available. You can specify `keep`,
+        `drop`, or neither, but not both. This covers all possible options:
+        keep only a few, keep all BUT a few, or keep all (drop all is the
+        default case and doesn't require a decorator).
+    drop: Iterable[str] or str
+        Name(s) of instance attributes to ignore. I.e. if you want to make
+        all instance attributes available as fallbacks except for self.df,
+        you could specify drop=('df').
+    save: bool
+        If True, kwargs that share names with instance attributes will be
+        overwritten with their new values. E.g. if we previously had
+        self.lr = 3e-3 and you call your decorated method with
+        obj.mymethod(lr=1), self.lr will be set to 1.
+
+    Examples
+    --------
+    # Ex 1. self.a, self.b, and self.c are all available as defaults
+
+    class Tree:
+        def __init__(self, a, b, c=3):
+            self.a = a
+            self.b = b
+            self.c = c
+
+        @fallback
+        def call(self, **kwargs):
+            return a, b, c
+
+    # Ex 2. self.b is not available as a default. We must put b in `call`'s
+    # signature or the variable won't be accessible.
+
+    class Tree:
+        def __init__(self, a, b, c=3):
+            self.a = a
+            self.b = b
+            self.c = c
+
+        @fallback(drop=('b'))
+        def call(self, b, **kwargs):
+            return a, b, c
+
+    # Ex 3. Self.b and self.c are available as defaults. If b or c are
+    # specified in kwargs, the corresponding instance attribute will be updated
+    # to take on the new value.
+
+    class Tree:
+        def __init__(self, a, b, c=3):
+            self.a = a
+            self.b = b
+            self.c = c
+
+        @fallback(keep=['b', 'c'], save=True)
+        def call(self, a, **kwargs):
+            return a, b, c
+    """
+    if meth is None:
+        # Want to avoid errors if user passes in string or leaves comma out of
+        # tuple when specifying keep/drop.
+        return partial(fallback, keep=tolist(keep), drop=tolist(drop),
+                       save=save)
+
+    @wraps(meth)
+    def wrapper(*args, **kwargs):
+        self = args[0]
+        self_kwargs = vars(self)
+        if keep or drop: self_kwargs = select(self_kwargs, keep, drop)
+
+        # Update kwargs with instance attribute defaults. Also update self if
+        # user asked to save kwargs.
+        for k, v in self_kwargs.items():
+            if k not in kwargs:
+                kwargs[k] = v
+            elif save:
+                setattr(self, k, kwargs[k])
+
+        # Execute and return.
+        with temporary_global_scope(kwargs):
+            return meth(*args, **kwargs)
+
+    return wrapper
 
