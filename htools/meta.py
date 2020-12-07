@@ -1589,12 +1589,14 @@ def log_cmd(path, mode='w', defaults=False):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
-            # Don't call when another function imports the wrapped function.
-            # That might be useful for a more general log_signature() function
-            # but here we're specifically looking at command line args. Without
-            # this, I got some undesirable behavior when writing a script that
-            # called another: the new command was overwriting the old log file.
-            if func.__module__ != '__main__': return func(*args, **kwargs)
+            # Don't call when another function imports the wrapped function
+            # unless we specifically ask it to by setting LOG_CMD = True in our
+            # CLI script. Without this, I got some undesirable behavior when
+            # writing a script that called another: the new command was
+            # overwriting the old log file.
+            if func.__module__ != '__main__' and not globals().get('LOG_CMD',
+                                                                   False):
+                return func(*args, **kwargs)
 
             # Log command before running script. Don't want to risk some
             # obscure bug occurring at the end and ruining a long process.
