@@ -1389,7 +1389,7 @@ def valuecheck(func):
     return wrapper
 
 
-def debug(func=None, prefix='', arguments=True):
+def debug(func=None, prefix='', arguments=True, out_path=None):
     """Decorator that prints information about a function call. Often, this
     will only be used temporarily when debugging. Note that a wrapped function
     that accepts *args will display a signature including an 'args' parameter
@@ -1410,6 +1410,14 @@ def debug(func=None, prefix='', arguments=True):
     arguments: bool
         If True, the printed message will include the function arguments.
         If False, it will print the function name but not its arguments.
+    out_path: str or Path or None
+        If provided, a dict of arguments will be saved as a json file as
+        specified by this path. Intermediate directories will be created if
+        necessary. Function arguments will be made available for string
+        formatting if you wish to use that in the file name.
+        Example: 'data/models/{prefix}/args.json'. The argument "prefix" will
+        be used to save the file in the appropriate place. Note: `arguments`
+        does not affect this since arguments are the only thing saved here.
 
     Examples
     --------
@@ -1438,7 +1446,11 @@ def debug(func=None, prefix='', arguments=True):
     """
     if not func:
         if prefix: prefix += ' '
-        return partial(debug, prefix=prefix, arguments=arguments)
+        if out_path:
+            assert str(out_path).endswith('.json'), \
+                'out_path must ends with .json'
+        return partial(debug, prefix=prefix, arguments=arguments,
+                       out_path=out_path)
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -1448,13 +1460,15 @@ def debug(func=None, prefix='', arguments=True):
             sig = bound_args(wrapper, args, kwargs, collapse_kwargs=True)
             if sig:
                 first_key = next(iter(sig))
-                # Remove self/cls arg from methods.
+                # Remove self/cls arg from methods. Just check first arg to be
+                # extra careful.
                 if first_key in ('self', 'cls'):
                     del sig[first_key]
             arg_strs = (f'{k}={repr(v)}' for k, v in sig.items())
 
         # Print call message and return output.
         print(out_fmt.format(prefix, func.__qualname__, ', '.join(arg_strs)))
+        if out_path: save(dict(sig), str(out_path).format(**sig))
         return func(*args, **kwargs)
 
     return wrapper
@@ -1521,7 +1535,7 @@ def return_stdout(func):
     return wrapper
 
 
-def log_cmd(path, mode='w'):
+def log_cmd(path, mode='w', defaults=False):
     """Decorator that saves the calling command for a python script. This is
     often useful for CLIs that train ML models. It makes it easy to re-run
     the script at a later date with the same or similar arguments.
@@ -1534,6 +1548,13 @@ def log_cmd(path, mode='w'):
         Determines whether output should overwrite old file or be appended.
         One of ('a', 'w'). In most cases we will want append mode because we're
         tracking multiple trials.
+    defaults: bool
+        If True, include all arg values, even those that weren't specified
+        from the command line (e.g. if your CLI function accepts up to 10 args
+        (some with default values) and you pass in 3, the command will be
+        logged as if you explicitly passed in all 10. This can be useful if
+        you think your default args might change over time). If False, only
+        args that were explicitly mentioned in your command will be used.
 
     Examples
     --------
@@ -1573,17 +1594,32 @@ def log_cmd(path, mode='w'):
             # but here we're specifically looking at command line args. Without
             # this, I got some undesirable behavior when writing a script that
             # called another: the new command was overwriting the old log file.
-            if func.__module__ == '__main__':
-                fn_locals = bound_args(func, args, kwargs, True)
-                res = 'python'
+            if func.__module__ != '__main__': return func(*args, **kwargs)
+
+            # Log command before running script. Don't want to risk some
+            # obscure bug occurring at the end and ruining a long process.
+            fn_locals = bound_args(func, args, kwargs, True)
+            start_of_line = ' \\\n\t'
+            res = 'python'
+
+            if defaults:
+                res += __file__
+                for k, v in fn_locals.items():
+                    # Enclose data structure args in single quotes and use
+                    # double quotes inside if necessary.
+                    if isinstance(v, (tuple, list, dict, set)):
+                        v = "'" + str(v).replace("'", '"') + "'"
+                    res += f'{start_of_line}--{k} {v}'
+            else:
                 for arg in sys.argv:
-                    res += ' \\\n\t' if arg.startswith('-') else ' '
+                    res += start_of_line if arg.startswith('-') else ' '
                     # Ensure non-primitive kwargs are quoted appropriately.
                     for start, end in ['[]', '()', '{}']:
                         if arg.startswith(start) and arg.endswith(end):
                             arg = f"'{arg}'"
                     res += arg
-                save(res+'\n\n', Path(path.format(**fn_locals)), mode)
+
+            save(res+'\n\n', Path(path.format(**fn_locals)), mode)
             return func(*args, **kwargs)
         return wrapped
     return decorator
@@ -1869,7 +1905,7 @@ def temporary_global_scope(kwargs):
     """Make a dict of key-value pairs temporarily available as global vars.
     Used (at least as of 12/3/20) in `add_kwargs` and `fallback` decorators.
     The original global variables should be restored after exiting the block.
-    """"
+    """
     old_globals = globals().copy()
     globals().update(kwargs)
     try:
