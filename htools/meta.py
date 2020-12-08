@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+from collections import ChainMap
 from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
 from functools import wraps, partial, update_wrapper
 import inspect
+from inspect import Parameter
 import io
 import logging
 import os
@@ -1538,7 +1540,15 @@ def return_stdout(func):
 def log_cmd(path, mode='w', defaults=False):
     """Decorator that saves the calling command for a python script. This is
     often useful for CLIs that train ML models. It makes it easy to re-run
-    the script at a later date with the same or similar arguments.
+    the script at a later date with the same or similar arguments. If importing
+    a wrapped function (or class with a wrapped method), you must include
+
+    `os.environ['LOG_CMD'] = 'true'`
+
+    in your script if you want logging to occur (accidentally overwriting log
+    files unintentionally can be disastrous). Values 'True' and '1' also work
+    but True and 1 do not (os.environ requires strings). Note that these values
+    will not persist once the script completes.
 
     Parameters
     ----------
@@ -1590,12 +1600,13 @@ def log_cmd(path, mode='w', defaults=False):
         @wraps(func)
         def wrapped(*args, **kwargs):
             # Don't call when another function imports the wrapped function
-            # unless we specifically ask it to by setting LOG_CMD = True in our
-            # CLI script. Without this, I got some undesirable behavior when
-            # writing a script that called another: the new command was
-            # overwriting the old log file.
-            if func.__module__ != '__main__' and not globals().get('LOG_CMD',
-                                                                   False):
+            # unless we specifically ask it to by setting LOG_CMD = 'true' in
+            # our CLI script. This is necessary because we sometimes want a
+            # script to call another script and without this check, the new
+            # command would always overwrite the old one which isn't always
+            # what we want.
+            if func.__module__ != '__main__' and not \
+                        os.environ.get('LOG_CMD', '').lower() in ('true', '1'):
                 return func(*args, **kwargs)
 
             # Log command before running script. Don't want to risk some
@@ -2019,4 +2030,142 @@ def fallback(meth=None, *, keep=(), drop=(), save=False):
             return meth(*args, **kwargs)
 
     return wrapper
+
+
+def add_kwargs(*fns, required=True, variable=True):
+    """When one or more functions are called inside another function, we often
+    have the choice of accepting **kwargs in our outer function (downside:
+    user can't see parameter names with quick documentation tools) or
+    explicitly typing out each parameter name and default (downsides: time
+    consuming and error prone since it's easy to update the inner function and
+    forget to update the outer one). This lets us update the outer function's
+    signature automatically based on the inner function(s)'s signature(s).
+    The Examples section should make this more clear.
+
+    The wrapped function must accept **kwargs, but you shouldn't refer to
+    `kwargs` explicitly inside the function. Its variables will be made
+    available essentially as global variables. This shares a related goal with
+    fastai's `delegates` decorator but it provides a slightly different
+    solution: `delegates` updates the quick documentation but the variables
+    are still ultimately only available as kwargs. Here, they are available
+    like regular variables.
+
+    Note: don't actually use this for anything important, I imagine it could
+    lead to some pretty nasty bugs. I was just determined to get something
+    working.
+
+    Parameters
+    ----------
+    fns: functions
+        The inner functions whose signatures you wish to use to update the
+        signature of the decorated outer function. When multiple functions
+        contain a parameter with the same name, priority is determined by the
+        order of `fns` (earlier means higher priority).
+    required: bool
+        If True, include required arguments from inner functions (that is,
+        positional arguments or positional_or_keyword arguments with no
+        default value). If False, exclude these (it may be preferable to
+        explicitly include them in the wrapped function's signature).
+    variable: bool
+        If True, include *kwargs and **kwargs from the inner functions. They
+        will be made available as {inner_function_name}_args and
+        {inner_function_name}_kwargs, respectively (see Examples). Otherwise,
+        they will be excluded.
+
+    Examples
+    --------
+    def foo(x, c, *args, a=3, e=(11, 9), b=True, f=('a', 'b', 'c'), **kwargs):
+        print('in foo')
+        return x * c
+
+    def baz(n, z='z', x='xbaz', c='cbaz'):
+        print('in baz')
+        return n + z + x + c
+
+    baz comes before foo so its x param takes priority and has a default
+    value of 'xbaz'. The decorated function always retains first priority so
+    the c param remains positional despite its appearance as a positional
+    arg in foo.
+
+    @add_kwargs(baz, foo, positional=True)
+    def bar(c, d=16, **kwargs):
+        foo_res = foo(x, c, *foo_args, a=a, e=e, b=b, f=f, **foo_kwargs)
+        baz_res = baz(n, z, x, c)
+        return {'c': c, 'n': n, 'd': d, 'x': x, 'z': z, 'a': a,
+                'e': e, 'b': b, 'f': f}
+
+    bar ends up with the following signature:
+    <Signature (c, n, d=16, x='xtri', foo_args=(), z='z', *, a=3, e=(11, 9),
+                b=True, f=('a', 'b', 'c'), foo_kwargs={}, **kwargs)>
+
+    Notice many variables are available inside the function even though they
+    aren't explicitly hard-coded into our function definition. When using
+    shift-tab in Jupyter or other quick doc tools, they will all be visible.
+    You can see how passing in multiple functions can quickly get messy so
+    if you insist on using this, try to keep it to 1-2 functions if possible.
+    """
+    param_types = {Parameter.POSITIONAL_OR_KEYWORD, Parameter.KEYWORD_ONLY}
+    if required: param_types.add(Parameter.POSITIONAL_ONLY)
+
+    def _args(fn):
+        res = {}
+        for k, v in params(fn).items():
+            # If required=False, allow positional_or_keyword args with
+            # defaults but not those without.
+            if v.kind in param_types and (required
+                                          or v.default != inspect._empty):
+                res[k] = v
+
+            # args/kwargs are converted to non-varying types and names are
+            # adjusted to include function name. E.g. if we're adding kwargs
+            # from function foo which accepts kwargs, that arg becomes a
+            # keyword-only dictionary called foo_kwargs.
+            elif variable:
+                name = f'{fn.__name__}_{k}'
+                if v.kind == Parameter.VAR_POSITIONAL:
+                    kind = Parameter.POSITIONAL_OR_KEYWORD
+                    default = ()
+                elif v.kind == Parameter.VAR_KEYWORD:
+                    kind = Parameter.KEYWORD_ONLY
+                    default = {}
+                else:
+                    continue
+                res[name] = Parameter(name, kind, default=default)
+        return res
+
+    # ChainMap operates in reverse order so functions that appear earlier in
+    # `fns` take priority.
+    extras_ = dict(ChainMap(*map(_args, fns)))
+
+    def decorator(func):
+        """First get params present in func's original signature, then get
+        params from additional functions which are NOT present in original
+        signature. Combine and sort param lists so positional args come first
+        etc. Finally replace func's signature with our newly constructed one.
+        """
+        sig = inspect.signature(func)
+        extras = [v for v in
+                  select(extras_, drop=sig.parameters.keys()).values()]
+        parameters = sorted(
+            list(sig.parameters.values()) + extras,
+            key=lambda x: (x.kind, x.default != inspect._empty)
+        )
+        func.__signature__ = sig.replace(parameters=parameters)
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            """Execute wrapped function in a context where kwargs are
+            temporarily available as globals. Globals will be restored to
+            its prior state once execution completes.
+            """
+            # Order matters here: defaults must come first so user-passed
+            # args/kwargs will override them.
+            kwargs = {**{p.name: p.default for p in extras},
+                      **func.__signature__.bind(*args, **kwargs).arguments}
+            with temporary_global_scope(kwargs):
+                return func(**kwargs)
+
+        return wrapper
+
+    return decorator
 
