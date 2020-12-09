@@ -371,6 +371,7 @@ class FuzzyKeyDict(_FuzzyDictBase):
 
 class DotDict(dict):
     """Dictionary that allows use of dot notation as well as bracket notation.
+    This should be picklable starting in htools>=6.0.6.
     """
 
     def __getattr__(self, k):
@@ -381,6 +382,16 @@ class DotDict(dict):
 
     def __delattr__(self, k):
         del self[k]
+
+    def __getstate__(self):
+        """We often have to use `__reduce__` to make dict subclasses picklable
+        but this seems to work in this case, I think because we don't have any
+        required arguments to __init__.
+        """
+        return dict(self)
+
+    def __setstate__(self, data):
+        self.update(data)
 
 
 class LambdaDict(UserDict):

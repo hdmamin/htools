@@ -1914,21 +1914,24 @@ def immutify_defaults(func):
 
 
 @contextmanager
-def temporary_global_scope(kwargs):
-    """Make a dict of key-value pairs temporarily available as global vars.
-    Used (at least as of 12/3/20) in `add_kwargs` and `fallback` decorators.
-    The original global variables should be restored after exiting the block.
+def temporary_globals(func, **kwargs):
+    """Make a dict of key-value pairs temporarily available to a function in
+    its global vars. We have to use function globals rather than globals()
+    because the latter is evaluated when importing this function and so takes
+    on the globals of htools/meta.py rather than of the scope where the
+    code will ultimately be executed. Used in `add_kwargs` and `fallback`
+    decorators (i.e. mostly for toy functionality, risky to actually use this).
     """
-    old_globals = globals().copy()
-    globals().update(kwargs)
+    old_globals = func.__globals__.copy()
+    func.__globals__.update(kwargs)
     try:
         yield
     finally:
         for k in kwargs:
             if k in old_globals:
-                globals()[k] = old_globals[k]
+                func.__globals__[k] = old_globals[k]
             else:
-                del globals()[k]
+                del func.__globals__[k]
 
 
 def fallback(meth=None, *, keep=(), drop=(), save=False):
@@ -2026,7 +2029,7 @@ def fallback(meth=None, *, keep=(), drop=(), save=False):
                 setattr(self, k, kwargs[k])
 
         # Execute and return.
-        with temporary_global_scope(kwargs):
+        with temporary_globals(meth, **kwargs):
             return meth(*args, **kwargs)
 
     return wrapper
@@ -2162,8 +2165,9 @@ def add_kwargs(*fns, required=True, variable=True):
             # args/kwargs will override them.
             kwargs = {**{p.name: p.default for p in extras},
                       **func.__signature__.bind(*args, **kwargs).arguments}
-            with temporary_global_scope(kwargs):
-                return func(**kwargs)
+            with temporary_globals(func, **kwargs):
+                res = func(**kwargs)
+            return res
 
         return wrapper
 
