@@ -134,6 +134,10 @@ class LSHDict(_FuzzyDictBase):
     equivalent to an EmbeddingBag layer, but in torch that doesn't store
     intermediate representations so we wouldn't be able to use our pretrained
     embeddings.)
+
+    LSHDict does NOT support pickling as of version 6.0.6 (note: setitem seems
+    to be called before init when unpickling, meaning we try to access
+    self.forest in self._update_forest before it's been defined).
     """
 
     def __init__(self, data, n_candidates=None, n_keys=3, ngram_size=3,
@@ -290,6 +294,8 @@ class FuzzyKeyDict(_FuzzyDictBase):
     missing and return its corresponding value. This could be useful when
     working with embeddings, where we could map missing items to the indices
     of one or more existing embeddings.
+
+    Pickling seems to work but I would use this with caution.
 
     Examples
     --------
