@@ -137,7 +137,9 @@ class LSHDict(_FuzzyDictBase):
 
     LSHDict does NOT support pickling as of version 6.0.6 (note: setitem seems
     to be called before init when unpickling, meaning we try to access
-    self.forest in self._update_forest before it's been defined).
+    self.forest in self._update_forest before it's been defined. Even if we
+    change setitem so reindexing does not occur by default, it still tries to
+    hash the new word and add it to the forest so unpickling will still fail).
     """
 
     def __init__(self, data, n_candidates=None, n_keys=3, ngram_size=3,

@@ -17,6 +17,7 @@ import pickle
 from random import choice
 import re
 import smtplib
+from subprocess import run
 import sys
 from tqdm.auto import tqdm
 import wordninja as wn
@@ -1502,6 +1503,28 @@ def ngrams(word, n=3, step=1, drop_last=False):
         ngrams_.append(word[i:i+n])
     if drop_last and len(ngrams_[-1]) < n: ngrams_ = ngrams_[:-1]
     return ngrams_
+
+
+def shell(cmd):
+    """Execute shell command (between subprocess and os, there's ~5 different
+    ways to do this and I always forget which I want. This is just a way for me
+    to choose once and not have to decide again. There are rare situations
+    where we may need a different function (subprocess.run is blocking; if we
+    want to launch a process and continue the script without waiting for
+    completion, we can use subprocess.check_call).
+
+    Parameters
+    ----------
+    cmd: str
+        Example: 'ls *.csv'
+
+    Returns
+    -------
+    tuple: returncode (int), stderr, stdout. I believe stderr and stdout are
+    None if nothing is returned and str otherwise.
+    """
+    res = run(cmd.split())
+    return res.returncode, res.stderr, res.stdout
 
 
 SENTINEL = object()
