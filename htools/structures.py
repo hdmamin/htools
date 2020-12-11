@@ -1,4 +1,4 @@
-from collections import namedtuple, UserDict
+from collections import namedtuple, OrderedDict
 from datasketch import MinHash, MinHashLSHForest
 from functools import partial
 from fuzzywuzzy import fuzz, process
@@ -402,7 +402,30 @@ class DotDict(dict):
         self.update(data)
 
 
-class LambdaDict(UserDict):
+class IndexedDict(OrderedDict):
+    """OrderedDict that lets us use integer indices. The tradeoff is that we
+    can no longer use integers as keys since that would make it ambiguous
+    whether we were trying to index in with a key or a positional index.
+
+    This should be picklable.
+    """
+
+    def __init__(self, data=None):
+        # Argument must be iterable.
+        super().__init__(data or {})
+
+    def __setitem__(self, key, val):
+        if isinstance(key, int):
+            raise TypeError('`key` must not be an integer.')
+        super().__setitem__(key, val)
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+
+class LambdaDict(dict):
     """Create a default dict where the default function can accept parameters.
     Whereas the defaultdict in Collections can set the default as int or list,
     here we can pass in any function where the key is the parameter.

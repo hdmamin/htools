@@ -339,7 +339,7 @@ class MultiLogger(LoggerMixin):
     called by the user:
 
     logger = MultiLogger('train.log')
-    logger.info('Starting model training.')
+    logger.info('Starting model training.'numeric)
 
     Notice we call the `info` method rather than `write`.
     """
