@@ -4,7 +4,7 @@ from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
 from functools import wraps, partial, update_wrapper
 import inspect
-from inspect import Parameter
+from inspect import Parameter, signature
 import io
 import logging
 import os
@@ -17,7 +17,8 @@ import types
 import warnings
 from weakref import WeakSet
 
-from htools import hdir, load, save, identity, hasstatic, tolist, select
+from htools import hdir, load, save, identity, hasstatic, tolist, select, \
+    func_name
 
 
 class AutoInit:
@@ -74,8 +75,7 @@ class AutoInit:
         attrs = {k: v for k, v in sys._getframe(frame_idx).f_locals.items()
                  if not k.startswith('__')}
         attrs.pop('self')
-        bound = inspect.signature(self.__class__.__init__)\
-                       .bind_partial(**attrs)
+        bound = signature(self.__class__.__init__).bind_partial(**attrs)
 
         # Flatten dict so kwargs are not listed as their own argument.
         bound.arguments.update(
@@ -140,7 +140,7 @@ def auto_repr(cls):
     """
 
     def _repr(instance):
-        args = dict(inspect.signature(instance.__init__).parameters)
+        args = dict(signature(instance.__init__).parameters)
         arg_strs = (f'{k}={repr(v)}' for k, v in instance.__dict__.items()
                     if k in args.keys())
         return f'{type(instance).__name__}({", ".join(arg_strs)})'
@@ -506,7 +506,7 @@ class LazyChainMeta(type):
             public_name = k.lstrip('_')
 
             # Get args and kwargs passed to staticmethod (except for instance).
-            sig = inspect.signature(func)
+            sig = signature(func)
             sig = sig.replace(parameters=list(sig.parameters.values())[1:])
 
             # Must use default args so they are evaluated within loop.
@@ -760,7 +760,7 @@ def params(func):
     -------
     dict: Maps name (str) to Parameter.
     """
-    return dict(inspect.signature(func).parameters)
+    return dict(signature(func).parameters)
 
 
 def hasarg(func, arg):
@@ -803,7 +803,7 @@ def bound_args(func, args, kwargs, collapse_kwargs=True):
     -------
     OrderedDict[str, any]: Maps parameter name to passed value.
     """
-    bound = inspect.signature(func).bind_partial(*args, **kwargs)
+    bound = signature(func).bind_partial(*args, **kwargs)
     bound.apply_defaults()
     args = bound.arguments
     if not collapse_kwargs: return args
@@ -1249,7 +1249,7 @@ def callbacks(cbs):
             cb.setup(func)
         @wraps(func)
         def wrapper(*args, **kwargs):
-            bound = inspect.signature(func).bind_partial(*args, **kwargs)
+            bound = signature(func).bind_partial(*args, **kwargs)
             bound.apply_defaults()
             for cb in cbs:
                 cb.on_begin(func, bound.arguments, None)
@@ -1329,12 +1329,12 @@ def typecheck(func_=None, **types):
     # Case 2: Infer types from annotations. Skip if Case 1 already occurred.
     elif not types:
         types = {k: v.annotation
-                 for k, v in inspect.signature(func_).parameters.items()
+                 for k, v in signature(func_).parameters.items()
                  if not v.annotation == inspect._empty}
 
     @wraps(func_)
     def wrapper(*args, **kwargs):
-        fargs = inspect.signature(wrapper).bind(*args, **kwargs).arguments
+        fargs = signature(wrapper).bind(*args, **kwargs).arguments
         for k, v in types.items():
             if k in fargs and not isinstance(fargs[k], v):
                 raise TypeError(
@@ -1376,7 +1376,7 @@ def valuecheck(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        sig = inspect.signature(func)
+        sig = signature(func)
         annos = {k: v.annotation for k, v in sig.parameters.items()}
         bound = sig.bind(*args, **kwargs)
         bound.apply_defaults()
@@ -1878,7 +1878,7 @@ def rename_params(func, **old2new):
     `foo_metric` will work exactly like `foo` but its first two parameters will
     now be named "y_true" and "y_pred", respectively. """
     new_func = copy_func(func)
-    sig = inspect.signature(new_func)
+    sig = signature(new_func)
     kw_defaults = func.__kwdefaults__ or {}
     names, params = map(list, zip(*sig.parameters.items()))
     for old, new in old2new.items():
@@ -2146,7 +2146,7 @@ def add_kwargs(*fns, required=True, variable=True):
         signature. Combine and sort param lists so positional args come first
         etc. Finally replace func's signature with our newly constructed one.
         """
-        sig = inspect.signature(func)
+        sig = signature(func)
         extras = [v for v in
                   select(extras_, drop=sig.parameters.keys()).values()]
         parameters = sorted(
@@ -2173,3 +2173,102 @@ def add_kwargs(*fns, required=True, variable=True):
 
     return decorator
 
+
+@valuecheck
+def function_interface(present=(), required=(), defaults=(), startswith=(),
+                       args: (True, False, None)=None,
+                       kwargs: (True, False, None)=None,
+                       like_func=None):
+    """Decorator factory to enforce a some kind of function signature interface
+    (i.e. the first two arguments must be ('model', 'x') or the function must
+    accept **kwargs or the parameter 'learning_rate' must be present but not
+    required because it has a default value).
+
+    Parameters
+    ----------
+    present: Iterable[str]
+        List of parameter names that must be present in the function signature.
+        This will not check anything about their order or if they're required,
+        just that they're present.
+    required: Iterable[str]
+        List of names that must be required parameters in the function (i.e.
+        they have no default value).
+    defaults: Iterable[str]
+        List of names that must be present in the function signature with
+        default values.
+    startswith: Iterable[str]
+        List of names that the function signature must start with. Order
+        matters.
+    args: bool
+        If True, require function to accept *args. If False, require that it
+        doesn't. If None, don't check either way.
+    kwargs: bool
+        If True, require function to accept **kwargs. If False, require that it
+        doesn't. If None, don't check either way.
+    like_func: None or function
+        If provided, this function's signature will define the interface that
+        all future decorated functions must match. Their name will obviously
+        be different but all parameters must match (that means names, order,
+        types, defaults, etc.).
+
+    Returns
+    -------
+
+    """
+    def decorator(func):
+        def _param_status(param, params):
+            if param not in params:
+                return 'missing'
+            if params[param].default == inspect._empty:
+                return 'required'
+            return 'optional'
+
+        params = signature(func).parameters
+        name = func_name(func)
+        for param in present:
+            if param not in params:
+                raise RuntimeError(
+                    f'`{name}` signature must include parameter {param}.'
+                )
+        for param in required:
+            if _param_status(param, params) != 'required':
+                raise RuntimeError(
+                    f'`{name}` signature must include parameter {param} with '
+                    'no default parameter.'
+                )
+        for param in defaults:
+            if _param_status(param, params) != 'optional':
+                raise RuntimeError(
+                    f'`{name}` signature must include parameter {param} with '
+                    'default value.'
+                )
+        params_list = list(params.keys())
+        for i, param in enumerate(startswith):
+            if params_list[i] != param:
+                raise RuntimeError(f'`{name}` signature\'s parameter #{i+1} '
+                                   f'(1-indexed) must be named {param}.')
+        if args is not None:
+            has_args = any(v.kind == Parameter.VAR_POSITIONAL
+                           for v in params.values())
+            if has_args != args:
+                raise RuntimeError(f'`{name}` signature must '
+                                   f'{"" if args else "not"} accept *args.')
+        if kwargs is not None:
+            has_kwargs = any(v.kind == Parameter.VAR_KEYWORD
+                             for v in params.values())
+            if has_kwargs != kwargs:
+                raise RuntimeError(
+                    f'`{name}` signature must {"" if kwargs else "not"} '
+                    'accept **kwargs.'
+                )
+        if like_func and str(signature(like_func)) != str(signature(func)):
+            raise RuntimeError(f'`{name}` signature must match {like_func} '
+                               'signature.')
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
