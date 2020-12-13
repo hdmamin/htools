@@ -611,6 +611,73 @@ class LazyChainable(metaclass=LazyChainMeta):
         return f'{type(self).__name__}({", ".join(argstrs)})'
 
 
+class ContextDecorator(ABC):
+    """Abstract class that makes it easier to define classes that can serve
+    either as decorators or context managers. This is a viable option if the
+    function decorator case effectively wants to execute the function inside a
+    context manager. If you want to do something more complex, this may not be
+    appropriate since it's not clear what would happen in the context manager
+    use case.
+
+    Examples
+    --------
+    import time
+
+    class Timer(ContextDecorator):
+
+        def __init__(self):
+            # More complex decorators might need to store variables here.
+
+        def __enter__(self):
+            self.start = time.perf_counter()
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            print('TIME:', time.perf_counter() - self.start)
+
+    @Timer()
+    def foo(a, *args):
+        # do something
+
+    with Timer():
+        # do something
+
+    # Both of these usage methods work!
+    """
+
+    def __call__(self, *args, **kwargs):
+        """This method is NOT called when using child class as a context
+        manager.
+        """
+        # Handle case where the decorated function is implicitly passed to the
+        # decorator. Return the uncalled method just like how we often
+        # `return wrapper` when writing a decorator as a function.
+        if not hasattr(self, 'func'):
+            self._wrap_func(args[0])
+            return self.__call__
+
+        self.__enter__()
+        res = self.func(*args, **kwargs)
+        self.__exit__(None, None, None)
+        return res
+
+    def _wrap_func(self, func):
+        self.func = func
+        update_wrapper(self, func)
+
+    @abstractmethod
+    def __enter__(self):
+        """Do whatever you want to happen before executing the function (or
+        the block of code inside the context manager).
+        """
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Do anything that happens after the function finishes executing.
+        The three arguments will all be None unless an error occurs.
+        To suppress an error, this method must return True.
+        """
+
+
 class AbstractAttrs(type):
     """Basically the attribute equivalent of abc.abstractmethod: this allows
     us to define an abstract parent class that requires its children to
