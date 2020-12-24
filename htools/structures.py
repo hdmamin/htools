@@ -1,11 +1,12 @@
 from collections import namedtuple, OrderedDict
+from copy import deepcopy
 from datasketch import MinHash, MinHashLSHForest
 from functools import partial
 from fuzzywuzzy import fuzz, process
 import numpy as np
 import warnings
 
-from htools.core import ngrams
+from htools.core import ngrams, tolist, identity
 from htools.meta import add_docstring
 
 
@@ -53,6 +54,444 @@ def Args(**kwargs):
     """
     args = namedtuple('Args', kwargs.keys())
     return args(*kwargs.values())
+
+
+class TrieNode:
+    """Single node in a Trie. Most of the functionality is provided in Trie
+    class rather than here.
+    """
+
+    def __init__(self, data=()):
+        """
+        Parameters
+        ----------
+        data: Iterable or Iterable[Iterable]
+            One or more sequences to add to the node. This could be a string,
+            a list of strings, a list of tuples of ints, etc.
+        """
+        self.edges = {}
+        self.stop_state = False
+        for x in tolist(data):
+            self.append(x)
+
+    def append(self, seq):
+        if not seq:
+            self.stop_state = True
+            return
+        x = seq[0]
+        if x not in self.edges:
+            self.edges[x] = TrieNode()
+        self.edges[x].append(seq[1:])
+
+    def __repr__(self):
+        return f'{type(self).__name__}({list(self.edges.keys()) or ""})'
+
+
+class Trie:
+    """Memory-efficient data structure for highly duplicated sequence data. For
+    example, this would be a nice way to store a dictionary since many words
+    overlap (e.g. can, cannot, cannery, canning, cane, and cannon all share the
+    first 3 letters. With Trie, the common prefix is stored only once.).
+    Checking if a sequence is present is therefore O(n) where n is the length
+    of the input sequence. Notice this is unaffected by the number of values in
+    the Trie.
+    """
+
+    def __init__(self, values=(), suffix=False):
+        """
+        Parameters
+        ----------
+        values: str or list-like Iterable
+            If provided, this should be one or more sequences to add to the
+            try. Sequences could be strings, lists of strings (like word
+            tokens), tuples of integers, etc. As of Dec 2020, this should NOT
+            be numpy arrays or torch tensors.
+        """
+        self.head = TrieNode()
+        if suffix:
+            self._maybe_reverse = lambda x: x[::-1]
+        else:
+            self._maybe_reverse = identity
+        self.suffix = suffix
+
+        # dtype records the type of object present in the trie, and is a
+        # string rather than a type because lolviz library has a
+        # bug when displaying type attributes. Its visualizations are very
+        # helpful here so I don't want to break compatibility.
+        self.dtype = ''
+        self.child_dtype = ''
+        self.postprocess = None
+
+        # Do this rather than passing values directly to TrieNode because that
+        # won't give us validation or preprocessing.
+        self.extend(tolist(values))
+
+    def append(self, seq):
+        """Add a sequence to the trie. This operates in place."""
+        if not self.postprocess:
+            self.dtype = type(seq).__name__
+            self.child_dtype = type(seq[0]).__name__
+            self.postprocess = partial(str.join, '') if self.dtype == 'str' \
+                else identity
+        else:
+            self._validate_input(seq)
+        self.head.append(self._maybe_reverse(seq))
+
+    def extend(self, seqs):
+        """Add a list-like group of sequences to the Trie."""
+        for seq in seqs:
+            self.append(seq)
+
+    def __add__(self, seq):
+        """Allows us to add items to a trie using + operator. This does not
+        alter the trie in place: to do that, use `append` or assign the result
+        of this method back to your variable.
+
+        Returns
+        -------
+        Trie
+        """
+        clone = deepcopy(self)
+        clone.append(seq)
+        return clone
+
+    def _find(self, seq, node=None):
+        """Try to find a a sequence in the trie. We provide this helper method
+        rather than doing it entirely in __contains__ in case other methods
+        want to make use of the found node (perhaps passing it to
+        self._values.)
+
+        Returns
+        -------
+        TrieNode: If node.stop_state=True, the seq is in the trie. If False,
+        it's not.
+        """
+        seq = self._maybe_reverse(self._validate_input(seq))
+        node = node or self.head
+        for x in seq:
+            if x not in node.edges:
+                # Return this so __contains__ can check its stop state.
+                return TrieNode()
+            node = node.edges[x]
+        return node
+
+    def __contains__(self, seq):
+        """Check if a sequence is present in the trie.
+
+        Returns
+        -------
+        bool
+        """
+        return self._find(seq).stop_state
+
+    def _values(self, current=None, node=None):
+        """Generator that yields each sequence in the tree one by one. Don't
+        rely on the order, but I believe it should be a depth first traversal
+        where the order of subtries traversed is determined by insertion
+        order. See examples.
+
+        Parameters
+        ----------
+        current: list or None
+            List of partial sequence currently being retrieved. This is used
+            internally but should rarely need to be called by the user.
+        node: TrieNode or None
+            The node to retrieve values from. By default, we use the root
+            node, thereby retrieving values for the whole trie.
+
+        Examples
+        --------
+        >>> t = Trie(['add', 'subtract', 'addition', 'multiply', 'adds'])
+        >>> for v in t._values():
+               print(v)
+
+        add
+        addition
+        adds
+        subtract
+        multiply
+        """
+        node = node or self.head
+        current = current or []
+        if node.stop_state:
+            # Here, reversal is more of a postprocessing step than a
+            # preprocessing one: we're converting the reversed word stored in
+            # the suffix tree back to its original order.
+            yield self._maybe_reverse(self.postprocess(current))
+        for key, node_ in node.edges.items():
+            yield from self._values(current + [key], node_)
+
+    def __iter__(self):
+        """We separate this from self._values because we want the latter to
+        be callable with arguments.
+        """
+        yield from self._values()
+
+    def values(self):
+        """Get a list of all sequences in the trie. User-facing version of
+        `_values` that returns a list rather than a generator. User can also
+        simply call `list(my_trie)` and get the same result.
+        """
+        return list(self)
+
+    def __len__(self):
+        # Don't just delegate to `self.values()` because __len__ is called
+        # under the hood by list(self), thereby creating a recursion error in
+        # `self.values()`.
+        return sum(1 for _ in self)
+
+    def _startswith(self, seq, node=None):
+        """Base behavior for both `startswith` and `endswith`.
+        """
+        # Validation occurs in `_find`.
+        node = self._find(seq, node=node)
+        if self.suffix:
+            return [x + seq for x in self._values(node=node)]
+        else:
+            return [seq + x for x in self._values(node=node)]
+
+    def startswith(self, seq, node=None):
+        """Gets all values in a trie that start with a given sequence. (Unlike
+        str.startswith, this does NOT return a boolean - consider renaming in
+        a future version.)
+
+        Parameters
+        ----------
+        seq: Iterable
+            Same type as all the other sequences in the trie.
+        node: TrieNode
+            If provided, only the subtrie starting with this node will be
+            searched. Defaults to the head, i.e. the whole trie will be
+            searched.
+
+        Returns
+        -------
+        list: Each item will be one of the sequences in the trie. If an empty
+        list is returned, the trie contains no items sharing any leading
+        values with the input `seq`.
+        """
+        if self.suffix:
+            warnings.warn(
+                'Suffix trees are optimized for the `endswith` method, but '
+                '`startswith` will require walking the whole trie (may be '
+                'slow). For an efficient implementation of `startswith`, you '
+                'can create a prefix tree by passing `suffix=False` to '
+                'Trie.__init__.'
+            )
+            if self.dtype == 'str':
+                return [v for v in self._values(node=node)
+                        if v.startswith(seq)]
+            else:
+                self._validate_input(seq)
+                length = len(seq)
+                return [v for v in self._values(node=node)
+                        if v[:length] == seq]
+        return self._startswith(seq, node=node)
+
+    def endswith(self, seq, node=None):
+        """Gets all values in a trie that end with a given sequence. (Unlike
+        str.endswith, this does NOT return a boolean - consider renaming in
+        a future version.)
+
+        Parameters
+        ----------
+        seq: Iterable
+            Same type as all the other sequences in the trie.
+        node: TrieNode
+            If provided, only the subtrie starting with this node will be
+            searched. Defaults to the head, i.e. the whole trie will be
+            searched.
+
+        Returns
+        -------
+        list: Each item will be one of the sequences in the trie. If an empty
+        list is returned, the trie contains no items sharing any trailing
+        values with the input `seq`.
+        """
+        if not self.suffix:
+            warnings.warn(
+                'Prefix trees are optimized for the `startswith` method, but '
+                '`endswith` will require walking the whole trie (may be '
+                'slow). For an efficient implementation of `endswith`, you '
+                'can create a suffix tree by passing `suffix=True` to '
+                'Trie.__init__.'
+            )
+            if self.dtype == 'str':
+                return [v for v in self._values(node=node)
+                        if v.endswith(seq)]
+            else:
+                self._validate_input(seq)
+                length = len(seq)
+                return [v for v in self._values(node=node)
+                        if v[-length:] == seq]
+        return self._startswith(seq, node=node)
+
+    def _longest_common_prefix(self, seq, seen):
+        """Base functionality for the efficient version of
+        `longest_common_prefix` for prefix trees and `longest_common_suffix`
+        for suffix trees.
+
+        Parameters
+        ----------
+        seq: Iterable
+            Input sequence for which you wish to find sequences with matching
+            prefixes (or suffixes). Type must match that of the other
+            sequences in the trie.
+        seen: list
+            Empty list passed in. Seems to be necessary to accumulate matches.
+
+        Returns
+        -------
+        list: Each item in the list is of the same tyep as `seq`. An empty
+        list means no items in the tree share a common prefix with `seq`.
+        """
+        # Validation and reversal happens in `startswith`.
+        matches = self.endswith(seq) if self.suffix else self.startswith(seq)
+        if matches: return matches
+        node = self.head
+        for i, x in enumerate(self._maybe_reverse(seq)):
+            if x in node.edges:
+                seen.append(x)
+                node = node.edges[x]
+            elif i == 0:
+                # Otherwise, all values are returned when the first item is
+                # not in the trie.
+                return []
+            else:
+                seen = self._maybe_reverse(self.postprocess(seen))
+                if self.suffix:
+                    matches = [v + seen for v in self._values(node=node)]
+                else:
+                    matches = [seen + v for v in self._values(node=node)]
+                # Otherwise, we get bug where an empty list is returned if
+                # the longest matching prefix is a complete sequence and the
+                # node has no edges.
+                if node.stop_state and not matches:
+                    matches.append(seen)
+                return matches
+
+        # Case where the input sequence is present in the trie as a complete
+        # sequence and it has no edges. This cannot be combined with the
+        # case in the else statement above where matches is empty. We avoid
+        # handling this upfront with something like
+        # `if seq in self: return [seq]` because we want to capture additional
+        # valid sequences in present.
+        if node.stop_state:
+            return [self._maybe_reverse(self.postprocess(seen))]
+
+    def longest_common_prefix(self, seq):
+        """Find sequences that share a common prefix with an input sequence.
+        For instance, "carry" shares a common prefix of length 3 with "car",
+        "carton", and "carsick", a common prefix of length 1 with "chat", and
+        no common prefix with "dog". Note that a word shares a common prefix
+        with itself, so if it's present in the trie it will be returned (in
+        addition to any words that begin with that substring: for instance,
+        both "carry" and "carrying" share a common prefix of length 5 with
+        "carry".)
+
+        Parameters
+        ----------
+        seq: Iterable
+            Input sequence for which you wish to find sequences with matching
+            prefixes. Type must match that of the other
+            sequences in the trie.
+
+        Returns
+        -------
+        list: Each item in the list is of the same tyep as `seq`. An empty
+        list means no items in the tree share a common prefix with `seq`.
+        """
+        # Validation occurs in self.startswith, often via self._find.
+        if not self.suffix:
+            return self._longest_common_prefix(seq, [])
+
+        warnings.warn(
+            'Suffix trees are optimized for the `longest_common_suffix` '
+            'method, but `longest_common_prefix` will require walking '
+            'the whole trie (may be slow). For an efficient implementation '
+            'of `longest_common_prefix`, you can create a prefix tree by '
+            'passing `suffix=False` to Trie.__init__.'
+        )
+        self._validate_input(seq)
+        res = []
+        for i in range(len(seq), 0, -1):
+            for v in self._values():
+                if v[:i] == seq[:i]: res.append(v)
+            if res: break
+        return res
+
+    def longest_common_suffix(self, seq):
+        """Find sequences that share a common suffix with an input sequence.
+        For instance, "carry" shares a common prefix of length 2 with "story",
+        "tawdry", and "ornery", a common suffix of length 1 with "slowly", and
+        no common suffix with "hate". Note that a word shares a common suffix
+        with itself, so if it's present in the trie it will be returned (in
+        addition to any words that end with that substring: for instance, both
+        "carry" and "miscarry" share a common suffix of length 5 with
+        "carry".)
+
+        Parameters
+        ----------
+        seq: Iterable
+            Input sequence for which you wish to find sequences with matching
+            suffixes. Type must match that of the other sequences in the trie.
+
+        Returns
+        -------
+        list: Each item in the list is of the same tyep as `seq`. An empty
+        list means no items in the tree share a common prefix with `seq`.
+        """
+        # Validation and reversal occur in self.endswith, often via
+        # self._find.
+        if self.suffix:
+            return self._longest_common_prefix(seq, [])
+
+        warnings.warn(
+            'Prefix trees are optimized for the `longest_common_prefix` '
+            'method, but `longest_common_suffix` will require walking the '
+            'whole trie (may be slow and memory intensive). For an '
+            'efficient implementation of `longest_common_suffix`, you can '
+            'create a suffix tree by passing `suffix=True` to Trie.__init__.'
+        )
+        self._validate_input(seq)
+        res = []
+        for i in range(len(seq), 0, -1):
+            for v in self._values():
+                if v[-i:] == seq[-i:]: res.append(v)
+            if res: break
+        return res
+
+    def _validate_input(self, seq):
+        """This should occur before calling self._maybe_reverse. Seq must be
+        the same type as the other items in the trie or an error will be
+        raised.
+        """
+        if type(seq).__name__ != self.dtype:
+            raise TypeError('`seq` type doesn\'t match type of other '
+                            'sequences.')
+        if type(seq[0]).__name__ != self.child_dtype:
+            raise TypeError('Type of first item in `seq` doesn\'t match type '
+                            'of first item in other sequences.')
+
+    def flip(self):
+        """Flip trie from a prefix tree to a suffix tree or vice versa. This
+        intentionally creates a new object rather than operating in place.
+
+        Examples
+        --------
+        >>> pre_tree = Trie(['dog', 'cat', 'den', 'clean'], suffix=False)
+        >>> suff_tree = pre_tree.flip()
+        """
+        return type(self)(self.values(), suffix=not self.suffix)
+
+    def __repr__(self):
+        # Display up to 5 values in repr.
+        vals = self.values()
+        if len(vals) > 5:
+            vals = '[' + ', '.join(repr(v) for v in vals[:5]) + ', ...]'
+        else:
+            vals = str(vals)
+        return f'{type(self).__name__}(values={vals}, suffix={self.suffix})'
 
 
 class _FuzzyDictBase(dict):
