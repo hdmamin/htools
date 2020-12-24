@@ -122,8 +122,9 @@ class Trie:
         self.child_dtype = ''
         self.postprocess = None
 
-        # Do this rather than passing values directly to TrieNode because that
-        # won't give us validation or preprocessing.
+        # Use extend rather than passing values directly to TrieNode because
+        # that won't give us validation or preprocessing.
+        self._length = 0
         self.extend(tolist(values))
 
     def append(self, seq):
@@ -136,6 +137,7 @@ class Trie:
         else:
             self._validate_input(seq)
         self.head.append(self._maybe_reverse(seq))
+        self._length += 1
 
     def extend(self, seqs):
         """Add a list-like group of sequences to the Trie."""
@@ -166,7 +168,8 @@ class Trie:
         TrieNode: If node.stop_state=True, the seq is in the trie. If False,
         it's not.
         """
-        seq = self._maybe_reverse(self._validate_input(seq))
+        self._validate_input(seq)
+        seq = self._maybe_reverse(seq)
         node = node or self.head
         for x in seq:
             if x not in node.edges:
@@ -237,8 +240,11 @@ class Trie:
     def __len__(self):
         # Don't just delegate to `self.values()` because __len__ is called
         # under the hood by list(self), thereby creating a recursion error in
-        # `self.values()`.
-        return sum(1 for _ in self)
+        # `self.values()`. Could do `sum(1 for _ in self) but that gets slow
+        # with large tries. There's currently no way to delete items so we
+        # don't have to worry about length changing outside of `append`, and
+        # if we do implement that we can simply adjust _length accordingly.
+        return self._length
 
     def _startswith(self, seq, node=None):
         """Base behavior for both `startswith` and `endswith`.
