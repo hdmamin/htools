@@ -72,47 +72,12 @@ option to set it here.</p>
 </div>
 <div class="section" id="module-htools.core">
 <span id="htools-core-module"></span><h2>htools.core module<a class="headerlink" href="#module-htools.core" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="htools.core.Args">
-<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">Args</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.Args" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrapper to easily create a named tuple of arguments. Functions sometimes
-return multiple values, and we have a few options to handle this: we can
-return them as a regular tuple, but it is often convenient to be able to
-reference items by name rather than position. If we want the output to be
-mutable, we can return a dictionary, but this still requires more space
-than a tuple and bracket notation is arguably less convenient than dot
-notation. We can create a new namedtuple inside the function, but this
-kind of seems like overkill to create a new type of namedtuple for each
-function.</p>
-<p>Instead, this lets us create a namedtuple of Args on the fly just as easily
-as making a dictionary.</p>
-<p class="rubric">Examples</p>
-<dl>
-<dt>def math_summary(x, y):</dt><dd><p><a href="#id17"><span class="problematic" id="id18">sum_</span></a> = x + y
-prod = x * y
-diff = x - y
-quotient = x / y
-return Args(sum=sum_,</p>
-<blockquote>
-<div><p>product=prod,
-difference=diff,
-quotient=quotient)</p>
-</div></blockquote>
-</dd>
-</dl>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span> <span class="o">=</span> <span class="n">math_summary</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span><span class="o">.</span><span class="n">product</span>
-</pre></div>
-</div>
-<p>8</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span><span class="o">.</span><span class="n">quotient</span>
-</pre></div>
-</div>
-<p>2</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">results</span>
-</pre></div>
-</div>
-<p>Args(sum=6, product=8, difference=2, quotient=2)</p>
+<dl class="class">
+<dt id="htools.core.BasicPipeline">
+<em class="property">class </em><code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">BasicPipeline</code><span class="sig-paren">(</span><em class="sig-param">*funcs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.BasicPipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Create a simple unidirectional pipeline of functions to apply in order
+with optional debugging output.</p>
 </dd></dl>
 
 <dl class="exception">
@@ -121,13 +86,68 @@ quotient=quotient)</p>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
 </dd></dl>
 
-<dl class="class">
-<dt id="htools.core.LambdaDict">
-<em class="property">class </em><code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">LambdaDict</code><span class="sig-paren">(</span><em class="sig-param">default_function</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.LambdaDict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
-<p>Create a default dict where the default function can accept parameters.
-Whereas the defaultdict in Collections can set the default as int or list,
-here we can pass in any function where the key is the parameter.</p>
+<dl class="function">
+<dt id="htools.core.always_true">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">always_true</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.always_true" title="Permalink to this definition">¶</a></dt>
+<dd><p>Similar to <cite>identity</cite> but returns True instead of x. I’m tempted to name
+this <cite>true</cite> but I fear that will cause some horrible bugs where I
+accidentally use this when I want to use True.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.amap">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">amap</code><span class="sig-paren">(</span><em class="sig-param">attr</em>, <em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.amap" title="Permalink to this definition">¶</a></dt>
+<dd><p>More convenient syntax for quick data exploration. Get an attribute
+value for multiple objects. Name is short for “attrmap”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>attr</strong> (<em>str</em>) – Name of attribute to retrieve for each object.</p></li>
+<li><p><strong>args</strong> (<em>any</em>) – Objects (usually of same type) to retrieve attributes for.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>list</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Result for each object.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>df1 = pd.DataFrame(np.random.randint(0, 10, (4, 5)))
+df2 = pd.DataFrame(np.random.randint(0, 3, (4, 5)))
+df3 = pd.DataFrame(np.random.randint(0, 3, (2, 3)))</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">amap</span><span class="p">(</span><span class="s1">&#39;shape&#39;</span><span class="p">,</span> <span class="n">df1</span><span class="p">,</span> <span class="n">df2</span><span class="p">,</span> <span class="n">df3</span><span class="p">)</span>
+<span class="go">[(4, 5), (4, 5), (2, 3)]</span>
+</pre></div>
+</div>
+<p>net = nn.Sequential(…)
+&gt;&gt;&gt; amap(‘shape’, <a href="#id1"><span class="problematic" id="id2">*</span></a>net.parameters())
+[torch.Size([5, 3]),</p>
+<blockquote>
+<div><p>torch.Size([16, 4]),
+torch.Size([16, 3]),
+torch.Size([16])]</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.camel2snake">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">camel2snake</code><span class="sig-paren">(</span><em class="sig-param">text</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.camel2snake" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert camel case to snake case. This assumes the input is valid camel
+case (if you have some weird hybrid of camel and snake case, for instance,
+you’d want to do some preprocessing first).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – Camel case string, e.g. vaderSentimentScore.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>str</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><cite>text</cite> converted to snake case, e.g. vader_sentiment_score.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
@@ -161,17 +181,43 @@ list(filter(None, [catch(lambda x: 1 / x, i) for i in range(3)]))
 </dd></dl>
 
 <dl class="function">
-<dt id="htools.core.dict_sum">
-<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">dict_sum</code><span class="sig-paren">(</span><em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.dict_sum" title="Permalink to this definition">¶</a></dt>
-<dd><dl>
-<dt>Given two or more dictionaries with numeric values, combine them into a</dt><dd><p>single dictionary. For keys that appear in multiple dictionaries, their
-corresponding values are added to produce the new value.</p>
-<p>This differs from combining two dictionaries in the following manner:</p>
-<p>{<a href="#id1"><span class="problematic" id="id2">**</span></a>d1, <a href="#id3"><span class="problematic" id="id4">**</span></a>d2}</p>
-<p>The method shown above will combine the keys but will retain the value
-from d2, rather than adding the values from d1 and d2.</p>
+<dt id="htools.core.cd_root">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">cd_root</code><span class="sig-paren">(</span><em class="sig-param">root_subdir='notebooks'</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.cd_root" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run at start of Jupyter notebook to enter project root.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>root_subdir</strong> (<em>str</em>) – Name of a subdirectory contained in the project root directory.
+If not found in the current working directory, this will move
+to the parent directory.</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<p>Sample file structure (abbreviated):
+my_project/</p>
+<blockquote>
+<div><dl class="simple">
+<dt>py/</dt><dd><p>fetch_raw_data.py</p>
+</dd>
+<dt>notebooks/</dt><dd><p>nb01_eda.ipynb</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>Running cd_root() from nb01_eda.ipynb will change the working
+directory from notebooks/ to my_project/, which is typically the
+same directory we’d run scripts in py/ from. This makes converting
+from notebooks to scripts easier.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.dict_sum">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">dict_sum</code><span class="sig-paren">(</span><em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.dict_sum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given two or more dictionaries with numeric values, combine them into a
+single dictionary. For keys that appear in multiple dictionaries, their
+corresponding values are added to produce the new value.</p>
+<p>This differs from combining two dictionaries in the following manner:</p>
+<p>{<a href="#id3"><span class="problematic" id="id4">**</span></a>d1, <a href="#id5"><span class="problematic" id="id6">**</span></a>d2}</p>
+<p>The method shown above will combine the keys but will retain the value
+from d2, rather than adding the values from d1 and d2.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>*args</strong> (<em>dicts</em>) – 2 or more dictionaries with numeric values.</p>
@@ -197,13 +243,18 @@ given key are summed to produce the new value.</p>
 <dl class="function">
 <dt id="htools.core.differences">
 <code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">differences</code><span class="sig-paren">(</span><em class="sig-param">obj1</em>, <em class="sig-param">obj2</em>, <em class="sig-param">methods=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.differences" title="Permalink to this definition">¶</a></dt>
-<dd><p>Find the differences between two objects of the same type. This is a
-way to get more detail beyond whether two objects are equal or not.</p>
+<dd><p>Find the differences between two objects (generally of the same type -
+technically this isn’t enforced but we do require that the objects have
+the same set of attribute names so a similar effect is achieved. Actual
+type checking was causing problems comparing multiple Args instances,
+presumably because each Args object is defined when called).</p>
+<p>This is a way to get more detail beyond whether two objects are equal or
+not.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>obj1</strong> (<em>any type</em>) – An object.</p></li>
-<li><p><strong>obj2</strong> (<em>same type as obj1</em>) – An object.</p></li>
+<li><p><strong>obj1</strong> (<em>any</em>) – An object.</p></li>
+<li><p><strong>obj2</strong> (<em>any</em><em>, </em><em>usually the same type as obj1</em>) – An object.</p></li>
 <li><p><strong>methods</strong> (<em>bool</em>) – <p>If True, include methods in the comparison. If False, only attributes
 will be compared. Note that the output may not be particularly
 interpretable when using method=True; for instance when comparing two
@@ -261,13 +312,40 @@ on for larger values.</p></li>
 </dd></dl>
 
 <dl class="function">
+<dt id="htools.core.fgrep">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">fgrep</code><span class="sig-paren">(</span><em class="sig-param">text</em>, <em class="sig-param">term</em>, <em class="sig-param">window=25</em>, <em class="sig-param">with_idx=False</em>, <em class="sig-param">reverse=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.fgrep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Search a string for a given term. If found, print it with some context.
+Similar to <cite>grep -C 1 term text</cite>. <cite>fgrep</cite> is short for faux grep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<em>str</em>) – Text to search.</p></li>
+<li><p><strong>term</strong> (<em>str</em>) – Term to look for in text.</p></li>
+<li><p><strong>window</strong> (<em>int</em>) – Number of characters to display before and after the matching term.</p></li>
+<li><p><strong>with_idx</strong> (<em>bool</em>) – If True, return index as well as string.</p></li>
+<li><p><strong>reverse</strong> (<em>bool</em>) – If True, reverse search direction (find last match rather than first).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>str or tuple[int, str]</strong> – If the term isn’t present, an empty string is returned. If
+with_idx=True, a tuple of (match index, string with text) is returned.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The desired term and its surrounding context.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
 <dt id="htools.core.flatten">
 <code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">flatten</code><span class="sig-paren">(</span><em class="sig-param">nested</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.flatten" title="Permalink to this definition">¶</a></dt>
 <dd><p>Flatten a nested sequence where the sub-items can be sequences or
 primitives. This differs slightly from itertools chain methods because
 those require all sub-items to be sequences. Here, items can be primitives,
-sequences, nested sequences, or any combination of these. This also returns
-a list rather than a generator.</p>
+sequences, nested sequences, or any combination of these. Any iterable
+items aside from strings will be completely un-nested, so use with caution
+(e.g. a torch Dataset would be unpacked into separate items for each
+index). This also returns a list rather than a generator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>nested</strong> (<em>sequence</em><em> (</em><em>list</em><em>, </em><em>tuple</em><em>, </em><em>set</em><em>)</em>) – Sequence where some or all of the items are also sequences.</p>
@@ -277,6 +355,120 @@ a list rather than a generator.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>Flattened version of <cite>nested</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.func_name">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">func_name</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.func_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Usually just returns the name of a function. The difference is this is
+compatible with functools.partial, which otherwise makes __name__
+inaccessible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>callable</em>) – Can be a function, partial, or callable class.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.has_classmethod">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">has_classmethod</code><span class="sig-paren">(</span><em class="sig-param">cls</em>, <em class="sig-param">meth_name</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.has_classmethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a class has a classmethod with a given name.
+Note that isinstance(cls.meth_name, classmethod) would always
+return False: we must use getattr_static or cls.__dict__[meth_name]
+to potentially return True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cls</strong> (<em>type</em><em> or </em><em>obj</em>) – This is generally intended to be a class but it should work on objects
+(class instances) as well.</p></li>
+<li><p><strong>meth_name</strong> (<em>str</em>) – The name of the potential classmethod to check for.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>bool</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>True if cls possesses a classmethod with the specified name.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.hasarg">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">hasarg</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">arg</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.hasarg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if a function has a given argument. Works with args and kwargs as
+well if you exclude the stars. See example below.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – </p></li>
+<li><p><strong>arg</strong> (<em>str</em>) – Name of argument to look for.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<dl class="simple">
+<dt>def foo(a, b=6, <a href="#id7"><span class="problematic" id="id8">*</span></a>args):</dt><dd><p>return</p>
+</dd>
+</dl>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hasarg</span><span class="p">(</span><span class="n">foo</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hasarg</span><span class="p">(</span><span class="n">foo</span><span class="p">,</span> <span class="s1">&#39;args&#39;</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hasarg</span><span class="p">(</span><span class="n">foo</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.hashable">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">hashable</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.hashable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if an object is hashable. Hashable objects will usually be
+immutable though this is not guaranteed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>object</em>) – The item to check for hashability.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>bool</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>True if <cite>x</cite> is hashable (suggesting immutability), False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.hasstatic">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">hasstatic</code><span class="sig-paren">(</span><em class="sig-param">cls</em>, <em class="sig-param">meth_name</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.hasstatic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a class possesses a staticmethod of a given name. Similar to
+hasattr. Note that isinstance(cls.meth_name, staticmethod) would always
+return False: we must use getattr_static or cls.__dict__[meth_name]
+to potentially return True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cls</strong> (<em>Type</em><em> or </em><em>any</em>) – A class or an instance (seems to work on both, though more extensive
+testing may be needed for more complex scenarios).</p></li>
+<li><p><strong>meth_name</strong> (<em>str</em>) – Name of method to check. If the class/instance does not contain any
+attribute with this name, function returns False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>bool</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>True if <cite>cls</cite> has a staticmethod with name <cite>meth_name</cite>.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -353,13 +545,211 @@ string. Each instance appears as its own item in the output list.
 </dd></dl>
 
 <dl class="function">
-<dt id="htools.core.load">
-<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.load" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrapper to load pickled (optionally zipped) or json data.</p>
+<dt id="htools.core.identity">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">identity</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.identity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the input argument. Sometimes it is convenient to have this if
+we sometimes apply a function to an item: rather than defining a None
+variable, sometimes setting it to a function, then checking if it’s None
+every time we’re about to call it, we can set the default as identity and
+safely call it without checking.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>any</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>x</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Unchanged input.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.ifnone">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">ifnone</code><span class="sig-paren">(</span><em class="sig-param">arg</em>, <em class="sig-param">backup</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.ifnone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shortcut to provide a backup value if an argument is None. Commonly used
+for numpy arrays since their truthiness is ambiguous.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>path</strong> (<em>str</em>) – File to load. File type will be inferred from extension.</p></li>
+<li><p><strong>arg</strong> (<em>any</em>) – We will check if this is None.</p></li>
+<li><p><strong>backup</strong> (<em>any</em>) – This will be returned if arg is None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Either <cite>arg</cite> or <cite>backup</cite> will be returned.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.is_builtin">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">is_builtin</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">drop_callables=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.is_builtin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if an object is a Python built-in object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>object</em>) – </p></li>
+<li><p><strong>drop_callables</strong> (<em>bool</em>) – If True, return False for callables (basically functions, methods, or
+classes). These typically will return True otherwise since they are of
+class <cite>type</cite> or <cite>builtin_function_or_method</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>bool</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>True if <cite>x</cite> is a built-in object, False otherwise.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.is_classmethod">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">is_classmethod</code><span class="sig-paren">(</span><em class="sig-param">meth</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.is_classmethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Companion to has_classmethod that checks a method itself rather than a
+class and a method name. It does use has_classmethod under the hood.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.isstatic">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">isstatic</code><span class="sig-paren">(</span><em class="sig-param">meth</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.isstatic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Companion to hasstatic that checks a method itself rather than a class
+and method name. It does use hasstatic under the hood.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.item">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">item</code><span class="sig-paren">(</span><em class="sig-param">it</em>, <em class="sig-param">random=True</em>, <em class="sig-param">try_values=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.item" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an item from an iterable (e.g. dict, set, torch DataLoader).
+This is a quick way to access an item for iterables that don’t support
+indexing, or do support indexing but require us to know a key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>it</strong> (<em>Iterable</em>) – Container that we want to access a value from.</p></li>
+<li><p><strong>random</strong> (<em>bool</em>) – If True, pick a random value from <cite>it</cite>. Otherwise just return the first
+value.</p></li>
+<li><p><strong>try_values</strong> (<em>bool</em>) – If True, will check if <cite>it</cite> has a <cite>values</cite> attribute and will operate
+on that if it does. We often want to see a random value from a dict
+rather than a key. If we want both a key and value, we could set
+try_values=False and pass in d.items().</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>any</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>An item from the iterable.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.kwargs_fallback">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">kwargs_fallback</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">*args</em>, <em class="sig-param">assign=False</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.kwargs_fallback" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>Use inside a method that accepts <a href="#id9"><span class="problematic" id="id10">**</span></a>kwargs. Sometimes we want to use</dt><dd><p>an instance variable for some computation but want to give the user the
+option to pass in a new value to the method (often ML hyperparameters) to
+be used instead. This function makes that a little more convenient.</p>
+<dl class="simple">
+<dt>self: object</dt><dd><p>The class instance. In most cases users will literally pass <cite>self</cite> in.</p>
+</dd>
+<dt>args: str</dt><dd><p>One or more names of variables to use this procedure on.</p>
+</dd>
+<dt>assign: bool</dt><dd><p>If True, any user-provided kwargs will be used to update attributes of
+the instance. If False (the default), they will be used in computation
+but won’t change the state of the instance.</p>
+</dd>
+<dt>kwargs: any</dt><dd><p>Just forward along the kwargs passed to the method.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>list or single object: If more than one arg is specified, a list of values</dt><dd><p>is returned. For just one arg, a single value will be returned.</p>
+</dd>
+</dl>
+<p>class Foo:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, a, b=3, c=(‘a’, ‘b’, ‘c’)):</dt><dd><p>self.a, self.b, self.c = a, b, c</p>
+</dd>
+<dt>def walk(self, d, <a href="#id11"><span class="problematic" id="id12">**</span></a>kwargs):</dt><dd><p>a, c = kwargs_fallback(self, ‘a’, ‘c’, <a href="#id13"><span class="problematic" id="id14">**</span></a>kwargs)
+print(self.a, self.b, self.c)
+print(a, c, end=’</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+<p>‘)</p>
+<blockquote>
+<div><blockquote>
+<div><p>b, c = kwargs_fallback(self, ‘b’, ‘c’, assign=True, <a href="#id15"><span class="problematic" id="id16">**</span></a>kwargs)
+print(self.a, self.b, self.c)
+print(b, c)</p>
+</div></blockquote>
+<p># Notice the first <cite>kwargs_fallback</cite> call doesn’t change attributes of f
+# but the second does. In the first block of print statements, the variable
+# <cite>b</cite> does not exist yet because we didn’t include it in <a href="#id17"><span class="problematic" id="id18">*</span></a>args.
+&gt;&gt;&gt; f = Foo(1)
+&gt;&gt;&gt; f.walk(d=0, b=10, c=100)
+1 3 (‘a’, ‘b’, ‘c’)
+1 100</p>
+<p>1 10 100
+10 100</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.listlike">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">listlike</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.listlike" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if an object is a list/tuple/set/array etc. Strings and
+mappings (e.g. dicts) are not considered list-like.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.lmap">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">lmap</code><span class="sig-paren">(</span><em class="sig-param">fn</em>, <em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.lmap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Basically a wrapper for <cite>map</cite> that returns a list rather than a
+generator. This is such a common pattern that I think it deserves its own
+function (think of it as a concise alternative to a list comprehension).
+One slight difference is that we use <a href="#id19"><span class="problematic" id="id20">*</span></a>args instead of passing in an
+iterable. This adds a slight convenience for the intended use case (fast
+prototyping). See the <cite>Examples</cite> for more on this.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>any</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Consider these three equivalent syntax options:</p>
+<p>lmap(fn, x, y)
+[fn(obj) for obj in (x, y)]
+list(map(fn, (x, y))</p>
+<p>When quickly iterating, option 1 saves a bit of typing. The extra
+parentheses that options 2 and 3 require to put x and y in a temporary
+data structure can get messy as we add more complex logic.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.load">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper to load text files or pickled (optionally zipped) or json data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – File to load. File type will be inferred from extension. Must be one of
+‘.txt’, ‘.json’, ‘.pkl’, or ‘.zip’.</p></li>
 <li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, will print message stating where object was loaded from.</p></li>
 </ul>
 </dd>
@@ -368,6 +758,132 @@ string. Each instance appears as its own item in the output list.
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>The Python object that was pickled to the specified file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.max_key">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">max_key</code><span class="sig-paren">(</span><em class="sig-param">d</em>, <em class="sig-param">fn=&lt;function identity&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.max_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the maximum value in a dictionary and return the associated key.
+If we want to compare values using something other than their numeric
+values, we can specify a function. For example, with a dict mapping strings
+to strings, fn=len would return the key with the longest value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>d</strong> (<em>dict</em>) – Values to select from.</p></li>
+<li><p><strong>fn</strong> (<em>callable</em>) – Takes 1 argument (a single value from d.values()) and returns a number.
+This will be used to sort the items.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>A key from dict <cite>d</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.method_of">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">method_of</code><span class="sig-paren">(</span><em class="sig-param">meth</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.method_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve the class a method belongs to. This will NOT work on
+attributes. Also, this won’t help if your goal is to retrieve an instance:
+this returns the type of the instance. Not thoroughly tested but it seems
+to work regardless of whether you pass in meth from an instance or a class
+(the output is the same in both cases).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>meth</strong> (<em>MethodType</em>) – The method to retrieve the class of.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>type</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>The class which defines the method in question.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>class Foo:</dt><dd><dl class="simple">
+<dt>def my_method(self, x):</dt><dd><p>return x*2</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>f = Foo()
+assert method_of(Foo.my_method) == method_of(f.my_method) == Foo</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.ngrams">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">ngrams</code><span class="sig-paren">(</span><em class="sig-param">word</em>, <em class="sig-param">n=3</em>, <em class="sig-param">step=1</em>, <em class="sig-param">drop_last=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.ngrams" title="Permalink to this definition">¶</a></dt>
+<dd><p>To get non-overlapping sequences, pass in same value for <cite>step</cite> as <cite>n</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.parallelize">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">parallelize</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">items</em>, <em class="sig-param">total=None</em>, <em class="sig-param">chunksize=1000</em>, <em class="sig-param">processes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.parallelize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a function to a sequence of items in parallel. A progress bar
+is included.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – This will be applied to each item in <cite>items</cite>.</p></li>
+<li><p><strong>items</strong> (<em>Iterable</em>) – Sequence of items to apply <cite>func</cite> to.</p></li>
+<li><p><strong>total</strong> (<em>int</em><em> or </em><em>None</em>) – This defaults to the length of <cite>items</cite>. In the case that items is a
+generator, this lets us pass in the length explicitly. This lets tdqm
+know how quickly to advance our progress bar.</p></li>
+<li><p><strong>chunksize</strong> (<em>int</em>) – Positive int that determines the size of chunks submitted to the
+process pool as separate tasks. Multiprocessing’s default is 1 but
+larger values should speed things up, especially with long sequences.</p></li>
+<li><p><strong>processes</strong> (<em>None</em>) – Optionally set number of processes to run in parallel.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.pipe">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">pipe</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">*funcs</em>, <em class="sig-param">verbose=False</em>, <em class="sig-param">attr=''</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.pipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to apply many functions in order to some object.
+This lets us replace messy notation where it’s hard to keep parenthesis
+straight:</p>
+<dl class="simple">
+<dt>list(parse_processed_text(tokenize_rows(porter_stem(strip_html_tags(</dt><dd><p>text)))))</p>
+</dd>
+</dl>
+<p>with:</p>
+<dl class="simple">
+<dt>pipe(text, strip_html_tags, porter_stem, tokenize_rows,</dt><dd><p>parse_processed_text, list)</p>
+</dd>
+</dl>
+<p>or if we have a list  of functions:</p>
+<p>pipe(x, <a href="#id21"><span class="problematic" id="id22">*</span></a>funcs)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>any</em>) – Object to apply functions to.</p></li>
+<li><p><strong>*funcs</strong> (<em>function</em><em>(</em><em>s</em><em>)</em>) – Functions in the order you want to apply them. Use functools.partial
+to specify other arguments.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – If True, print x (or an attribute of x) after each step.</p></li>
+<li><p><strong>attr</strong> (<em>str</em>) – If specified and verbose is True, will print this attribute of x
+after each function is applied.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>output of last func in <a href="#id23"><span class="problematic" id="id24">*</span></a>funcs</p>
 </dd>
 </dl>
 </dd></dl>
@@ -391,7 +907,7 @@ underscore (default True).</p></li>
 
 <dl class="function">
 <dt id="htools.core.quickmail">
-<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">quickmail</code><span class="sig-paren">(</span><em class="sig-param">subject</em>, <em class="sig-param">message</em>, <em class="sig-param">to_email</em>, <em class="sig-param">from_email=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.quickmail" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">quickmail</code><span class="sig-paren">(</span><em class="sig-param">subject</em>, <em class="sig-param">message</em>, <em class="sig-param">to_email</em>, <em class="sig-param">from_email=None</em>, <em class="sig-param">img_path=None</em>, <em class="sig-param">img_name=None</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.quickmail" title="Permalink to this definition">¶</a></dt>
 <dd><p>Send an email.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -412,15 +928,36 @@ underscore (default True).</p></li>
 </dd></dl>
 
 <dl class="function">
-<dt id="htools.core.robust_comp">
-<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">robust_comp</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">gen</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.robust_comp" title="Permalink to this definition">¶</a></dt>
-<dd><p>List comprehension with error handling. Note that values of None will be
-removed from the resulting list.</p>
+<dt id="htools.core.rmvars">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">rmvars</code><span class="sig-paren">(</span><em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.rmvars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper to quickly free up memory by deleting global variables. Htools
+3.0 does not provide a way to do this for local variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> (<em>str</em>) – One or more variable names to delete. Do not pass in the variable
+itself.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.safe_map">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">safe_map</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">seq</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.safe_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>This addresses the issue of error handling in map() or list
+comprehension operations by simply skipping any items that throw an error.
+Note that values of None will be removed from the resulting list.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>func</strong> (<em>function</em>) – Function to apply to each</p></li>
-<li><p><strong>gen</strong> (<em>generator</em>) – The sequence to iterate over. This could also be a list, set, etc.</p></li>
+<li><p><strong>func</strong> (<em>function</em>) – Function to apply to each item in seq.</p></li>
+<li><p><strong>seq</strong> (<em>generator</em><em>, </em><em>iterator</em>) – The sequence to iterate over. This could also be a generator, list,
+set, etc.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -431,22 +968,26 @@ removed from the resulting list.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<p># Notice that
-&gt;&gt;&gt; robust_comp(lambda x: x/(x-2), range(4))
+<p># Notice that instead of throwing an error when dividing by zero, that
+# entry was simply dropped.
+&gt;&gt;&gt; safe_map(lambda x: x/(x-2), range(4))
 [-0.0, -1.0, 3.0]</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="htools.core.save">
-<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">path</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.save" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrapper to save data as pickle (optionally zipped) or json.</p>
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">path</em>, <em class="sig-param">mode_pre='w'</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper to save data as text, pickle (optionally zipped), or json.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>obj</strong> (<em>any</em>) – Object to pickle.</p></li>
-<li><p><strong>path</strong> (<em>str</em>) – File name to save pickled object to. Should end with .pkl, .zip, or
+<li><p><strong>obj</strong> (<em>any</em>) – Object to save. This will be pickled/jsonified/zipped inside the
+function - do not convert it before-hand.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – File name to save object to. Should end with .txt, .pkl, .zip, or
 .json depending on desired output format. If .zip is used, object will
-be zipped and then pickled.</p></li>
+be zipped and then pickled. (.sh extension is also allowed and will be
+treated identically to .txt.)</p></li>
+<li><p><strong>mode_pre</strong> (<em>str</em>) – Determines whether to write or append text. One of (‘w’, ‘a’).</p></li>
 <li><p><strong>verbose</strong> (<em>bool</em>) – If True, print a message confirming that the data was pickled, along
 with its path.</p></li>
 </ul>
@@ -456,6 +997,114 @@ with its path.</p></li>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.select">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">select</code><span class="sig-paren">(</span><em class="sig-param">items</em>, <em class="sig-param">keep=()</em>, <em class="sig-param">drop=()</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.select" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select a subset of a data structure. When used on a mapping (e.g. dict),
+you can specify a list of keys to include or exclude. When used on a
+sequence like a list or tuple, specify indices instead of keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>items</strong> (<em>abc.Sequence</em><em> or </em><em>abc.Mapping</em>) – The dictionary to select items from.</p></li>
+<li><p><strong>keep</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Sequence of keys to keep.</p></li>
+<li><p><strong>drop</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Sequence of keys to drop. You should specify either <cite>keep</cite> or <cite>drop</cite>,
+not both.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dict</strong> – <cite>keep</cite>), or all keys except the specified ones (when passing in
+<cite>drop</cite>).</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Dictionary containing only the specified keys (when passing in</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.shell">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">shell</code><span class="sig-paren">(</span><em class="sig-param">cmd</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.shell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute shell command (between subprocess and os, there’s ~5 different
+ways to do this and I always forget which I want. This is just a way for me
+to choose once and not have to decide again. There are rare situations
+where we may need a different function (subprocess.run is blocking; if we
+want to launch a process and continue the script without waiting for
+completion, we can use subprocess.check_call).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>cmd</strong> (<em>str</em>) – Example: ‘ls <a href="#id25"><span class="problematic" id="id26">*</span></a>.csv’</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>tuple</strong> (<em>returncode (int), stderr, stdout. I believe stderr and stdout are</em>)</p></li>
+<li><p><em>None if nothing is returned and str otherwise.</em></p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.smap">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">smap</code><span class="sig-paren">(</span><em class="sig-param">*x</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.smap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get shape of each array/tensor in a list or tuple.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>*x</strong> (<em>np.arrays</em><em> or </em><em>torch.tensors</em>) – We use star unpacking here to create a consistent interface with amap()
+and lmap().</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>list</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Shape of each array/tensor in input.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.snake2camel">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">snake2camel</code><span class="sig-paren">(</span><em class="sig-param">text</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.snake2camel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert snake case to camel case. This assumes the input is valid snake
+case (if you have some weird hybrid of snake and camel case, for instance,
+you’d want to do some preprocessing first).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – Snake case string, e.g. vader_sentiment_score.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>str</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><cite>text</cite> converted to camel case, e.g. vaderSentimentScore.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.spacer">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">spacer</code><span class="sig-paren">(</span><em class="sig-param">char='-'</em>, <em class="sig-param">n_chars=79</em>, <em class="sig-param">newlines_before=1</em>, <em class="sig-param">newlines_after=1</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.spacer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get string to separate output when printing output for multiple items.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>char</strong> (<em>str</em>) – The character that will be printed repeatedly.</p></li>
+<li><p><strong>n_chars</strong> (<em>int</em>) – The number of times to repeat <cite>char</cite>. We expect that <cite>char</cite> is a
+single character so this will be the total line length.</p></li>
+<li><p><strong>newlines_before</strong> (<em>int</em>) – Number of newline characters to add before the spacer.</p></li>
+<li><p><strong>newlines_after</strong> (<em>int</em>) – Number of newline characters to add after the spacer.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
 </dd>
 </dl>
 </dd></dl>
@@ -484,6 +1133,145 @@ change the object’s state.</p>
 </dl>
 </dd></dl>
 
+<dl class="function">
+<dt id="htools.core.to_camel">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">to_camel</code><span class="sig-paren">(</span><em class="sig-param">text</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.to_camel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Experimental feature: tries to convert any common format to camel case.
+This hasn’t been extensively tested but it seems to work with camel case
+(no change), snake case, upper camel case, words separated by
+hyphens/dashes/spaces, and combinations of the above. It may occasionally
+split words that should not be split, though this should be rare if names
+use actual English words (this might not work so well on fastai-style
+variable names (very short, e.g. “tfms” for “transforms”), but the intended
+use case is mostly for fixing column names in pandas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>str</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Input text converted to snake case.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.to_snake">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">to_snake</code><span class="sig-paren">(</span><em class="sig-param">text</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.to_snake" title="Permalink to this definition">¶</a></dt>
+<dd><p>Experimental feature: tries to convert any common format to snake case.
+This hasn’t been extensively tested but it seems to work with snake case
+(no change), camel case, upper camel case, words separated by
+hyphens/dashes/spaces, and combinations of the above. It may occasionally
+split words that should not be split, though this should be rare if names
+use actual English words (this might not work so well on fastai-style
+variable names (very short, e.g. “tfms” for “transforms”), but the intended
+use case is mostly for fixing column names in pandas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>str</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Input text converted to snake case.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.tolist">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">tolist</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">length_like=None</em>, <em class="sig-param">length=None</em>, <em class="sig-param">error_message='x length does not match desired length.'</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.tolist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper to let a function accept a single value or a list of values for
+a certain parameter.</p>
+<p>WARNING: if x is a primitive and you specify a length (either via
+<cite>length_like</cite> or <cite>length</cite>, the resulting list will contain multiple
+references to the same item). This is mostly intended for use on lists of
+floats or ints so I don’t think it’s a problem, but keep this in mind when
+considering using this on mutable objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>Iterable</em>) – Usually either a list/tuple or a primitive.</p></li>
+<li><p><strong>length_like</strong> (<em>None</em><em> or </em><em>object</em>) – If provided, we check that x is the same length. If x is a primitive,
+we’ll make it the same length.</p></li>
+<li><p><strong>length</strong> (<em>None</em><em> or </em><em>int</em>) – Similar to <cite>length_like</cite> but lets us specify the desired length
+directly. <cite>length_like</cite> overrides this, though you should only provide
+one or the other.</p></li>
+<li><p><strong>error_message</strong> (<em>str</em>) – Displayed in the event that a desired length is specified and x is
+list-like and does not match that length. You can pass in your own
+error message if you want something more specific to your current use
+case.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>def train(lrs):</dt><dd><p>lrs = tolist(lrs)
+…</p>
+</dd>
+</dl>
+<p>We can now pass in a single learning rate or multiple.
+&gt;&gt;&gt; train(3e-3)
+&gt;&gt;&gt; train([3e-4, 3e-3])</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.vcounts">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">vcounts</code><span class="sig-paren">(</span><em class="sig-param">arr</em>, <em class="sig-param">normalize=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.vcounts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Equivalent of pandas_htools vcounts method that we can apply on lists
+or arrays. Basically just a wrapper around Counter but with optional
+normalization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arr</strong> (<em>Iterable</em>) – Sequence of values to count. Typically a list or numpy array.</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em>) – If True, counts will be converted to percentages.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dict</strong> – that they occur in <cite>arr</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Maps unique items in <cite>arr</cite> to the number of times (or % of times)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.core.xor_none">
+<code class="sig-prename descclassname">htools.core.</code><code class="sig-name descname">xor_none</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">n=1</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.core.xor_none" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks that exactly 1 (or n) of inputs is not None. Useful for
+validating optional function arguments (for example, ensuring the user
+specifies either a directory name or a list of files but not both.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – </p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The desired number of non-None elements. Usually 1 but we allow the
+user to specify other values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>None</strong> (<em>This will raise an error if the condition is not satisfied. Do not</em>)</p></li>
+<li><p><strong>use this as an if condition (e.g. `if xor_none(a, b)</strong> (print(‘success’)`.)</p></li>
+<li><p><em>This would always evaluate to False because the function doesn’t explicitly</em></p></li>
+<li><p><em>return a value so we get None.</em></p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 <div class="section" id="htools-magics-module">
 <h2>htools.magics module<a class="headerlink" href="#htools-magics-module" title="Permalink to this headline">¶</a></h2>
@@ -491,12 +1279,78 @@ change the object’s state.</p>
 <div class="section" id="module-htools.meta">
 <span id="htools-meta-module"></span><h2>htools.meta module<a class="headerlink" href="#module-htools.meta" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
+<dt id="htools.meta.AbstractAttrs">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">AbstractAttrs</code><a class="headerlink" href="#htools.meta.AbstractAttrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
+<p>Basically the attribute equivalent of abc.abstractmethod: this allows
+us to define an abstract parent class that requires its children to
+possess certain class and/or instance attributes. This differs from
+abc.abstractproperty in a few ways:</p>
+<p>1. abstractproperty ignores instance attributes. AbstractAttrs lets us
+specify required instance attributes and/or class attributes and
+distinguish between the two.
+2. abstractproperty considers the requirement fulfilled by methods,
+properties, and class attributes. AbstractAttrs does not allow methods
+(including classmethods and staticmethods) to fulfill either requirement,
+though properties can fulfill either.</p>
+<p class="rubric">Examples</p>
+<p>This class defines required instance attributes and class attributes,
+but you can also specify one or the other. If you don’t care whether an
+attribute is at the class or instance level, you can simply use
+&#64;abc.abstractproperty.</p>
+<dl>
+<dt>class Parent(metaclass=AbstractAttrs,</dt><dd><blockquote>
+<div><p>inst_attrs=[‘name’, ‘metric’, ‘strategy’],
+class_attrs=[‘order’, ‘is_val’, ‘strategy’]):</p>
+</div></blockquote>
+<p>pass</p>
+</dd>
+</dl>
+<p>Below, we define a child class that fulfills some but not all requirements.</p>
+<dl>
+<dt>class Child(Parent):</dt><dd><p>order = 1
+metric = ‘mse’</p>
+<dl class="simple">
+<dt>def __init__(self, x):</dt><dd><p>self.x = x</p>
+</dd>
+</dl>
+<p>&#64;staticmethod
+def is_val(x):</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+<p>&#64;property
+def strategy():</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+<dl class="simple">
+<dt>def name(self):</dt><dd><p>…</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>More specifically:</p>
+<p>Pass
+-possesses class attr ‘order’
+-possess attribute ‘strategy’ (property counts as an instance attribute but
+not a class attribute. This is consistent with how it can be called:
+inst.my_property returns a value, cls.my_property returns a property
+object.)</p>
+<p>Fail
+-‘metric’ is a class attribute while our interface requires it to be a
+class attribute
+-‘name’ is a method but it must be an instance attribute
+-‘is_val’ is a staticmethod but it must be a class attribute</p>
+</dd></dl>
+
+<dl class="class">
 <dt id="htools.meta.AutoInit">
 <em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">AutoInit</code><a class="headerlink" href="#htools.meta.AutoInit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Mixin class where child class has a long list of init arguments where
 the parameter name and the class attribute will be the same. Note that
-<a href="#id5"><span class="problematic" id="id6">*</span></a>args are not supported in the init method because each attribute that is
+<a href="#id27"><span class="problematic" id="id28">*</span></a>args are not supported in the init method because each attribute that is
 defined in the resulting object must have a name. A variable length list
 of args can still be passed in as a single argument, of course, without the
 use of star unpacking.</p>
@@ -536,7 +1390,7 @@ informative when constructing instances of the child class and does not
 have the built in __repr__ that comes with AutoInit:</p>
 <dl class="simple">
 <dt>class Child:</dt><dd><dl class="simple">
-<dt>def __init__(self, <a href="#id7"><span class="problematic" id="id8">**</span></a>kwargs):</dt><dd><p>self.__dict__.update(kwargs)</p>
+<dt>def __init__(self, <a href="#id29"><span class="problematic" id="id30">**</span></a>kwargs):</dt><dd><p>self.__dict__.update(kwargs)</p>
 </dd>
 </dl>
 </dd>
@@ -548,13 +1402,251 @@ have the built in __repr__ that comes with AutoInit:</p>
 <em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">Callback</code><a class="headerlink" href="#htools.meta.Callback" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
 <p>Abstract base class for callback objects to be passed to &#64;callbacks
-decorator. Children must implement a __call__ method that accepts function
-inputs and outputs.</p>
+decorator. Children must implement on_begin and on_end methods. Both should
+accept the decorated function’s inputs and output as arguments</p>
+<p>Often, we may want to use the &#64;debug decorator on one or both of these
+methods. If both methods should perform the same steps, one shortcut
+is to implement a single undecorated __call__ method, then have the
+debug-decorated on_begin and on_end methods return self(inputs, output).</p>
+<dl class="method">
+<dt id="htools.meta.Callback.on_begin">
+<em class="property">abstract </em><code class="sig-name descname">on_begin</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">inputs</em>, <em class="sig-param">output=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.Callback.on_begin" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – The function being decorated.</p></li>
+<li><p><strong>inputs</strong> (<em>dict</em>) – Dictionary of bound arguments passed to the function being
+decorated with &#64;callbacks.</p></li>
+<li><p><strong>output</strong> (<em>any</em>) – Callbacks to be executed after the function call can pass the
+function output to the callback. The default None value will remain
+for callbacks that execute before the function.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="htools.meta.Callback.on_end">
+<em class="property">abstract </em><code class="sig-name descname">on_end</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">inputs</em>, <em class="sig-param">output=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.Callback.on_end" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – The function being decorated.</p></li>
+<li><p><strong>inputs</strong> (<em>dict</em>) – Dictionary of bound arguments passed to the function being
+decorated with &#64;callbacks.</p></li>
+<li><p><strong>output</strong> (<em>any</em>) – Callbacks to be executed after the function call can pass the
+function output to the callback. The default None value will remain
+for callbacks that execute before the function.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="htools.meta.Callback.setup">
+<em class="property">abstract </em><code class="sig-name descname">setup</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.Callback.setup" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>function</em>) – The function being decorated.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.ContextDecorator">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">ContextDecorator</code><a class="headerlink" href="#htools.meta.ContextDecorator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>Abstract class that makes it easier to define classes that can serve
+either as decorators or context managers. This is a viable option if the
+function decorator case effectively wants to execute the function inside a
+context manager. If you want to do something more complex, this may not be
+appropriate since it’s not clear what would happen in the context manager
+use case.</p>
+<p class="rubric">Examples</p>
+<p>import time</p>
+<p>class Timer(ContextDecorator):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self):</dt><dd><p># More complex decorators might need to store variables here.</p>
+</dd>
+<dt>def __enter__(self):</dt><dd><p>self.start = time.perf_counter()</p>
+</dd>
+<dt>def __exit__(self, exc_type, exc_value, traceback):</dt><dd><p>print(‘TIME:’, time.perf_counter() - self.start)</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>&#64;Timer()
+def foo(a, <a href="#id31"><span class="problematic" id="id32">*</span></a>args):</p>
+<blockquote>
+<div><p># do something</p>
+</div></blockquote>
+<dl class="simple">
+<dt>with Timer():</dt><dd><p># do something</p>
+</dd>
+</dl>
+<p># Both of these usage methods work!</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.LazyChainMeta">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">LazyChainMeta</code><a class="headerlink" href="#htools.meta.LazyChainMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
+<p>Metaclass to create LazyChainable objects.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.LazyChainable">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">LazyChainable</code><a class="headerlink" href="#htools.meta.LazyChainable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base class that allows children to lazily chain methods,
+similar to a Spark RDD.</p>
+<p>Chainable methods must be decorated with &#64;staticmethod
+and &#64;chainmethod and be named with a leading underscore. A public
+method without the leading underscore will be created, so don’t
+overwrite this with another method. Chainable methods
+accept an instance of the same class as the first argument,
+process the instance in some way, then return it. A chain of
+commands will be stored until the exec() method is called.
+It can operate either in place or not.</p>
+<p class="rubric">Examples</p>
+<p>class Sequence(LazyChainable):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, numbers, counter, new=True):</dt><dd><p>super().__init__()
+self.numbers = numbers
+self.counter = counter
+self.new = new</p>
+</dd>
+</dl>
+<p>&#64;staticmethod
+&#64;lazychain
+def _sub(instance, n):</p>
+<blockquote>
+<div><p>instance.counter -= n
+return instance</p>
+</div></blockquote>
+<p>&#64;staticmethod
+&#64;lazychain
+def _gt(instance, n=0):</p>
+<blockquote>
+<div><p>instance.numbers = list(filter(lambda x: x &gt; n, instance.numbers))
+return instance</p>
+</div></blockquote>
+<p>&#64;staticmethod
+&#64;lazychain
+def _call(instance):</p>
+<blockquote>
+<div><p>instance.new = False
+return instance</p>
+</div></blockquote>
+<dl class="simple">
+<dt>def __repr__(self):</dt><dd><p>pre, suf = super().__repr__().split(‘(‘)
+argstrs = (f’{k}={repr(v)}’ for k, v in vars(self).items())
+return f’{pre}({“, “.join(argstrs)}, {suf}’</p>
+</dd>
+</dl>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">seq</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">output</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">gt</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span><span class="o">.</span><span class="n">exec</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">output</span>
+</pre></div>
+</div>
+<p>Sequence(ops=[], numbers=[3, 5], counter=-3, new=False)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">seq</span>   <span class="c1"># Unchanged because exec was not in place.</span>
+</pre></div>
+</div>
+<p>Sequence(ops=[], numbers=[3, -1, 5], counter=0, new=True)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">output</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">gt</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">call</span><span class="p">()</span><span class="o">.</span><span class="n">exec</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">output</span>   <span class="c1"># None because exec was in place.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">seq</span>   <span class="c1"># Changed</span>
+</pre></div>
+</div>
+<p>Sequence(ops=[], numbers=[3, -1, 5], counter=-3, new=False)</p>
+<dl class="method">
+<dt id="htools.meta.LazyChainable.exec">
+<code class="sig-name descname">exec</code><span class="sig-paren">(</span><em class="sig-param">inplace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.LazyChainable.exec" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.LoggerMixin">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">LoggerMixin</code><a class="headerlink" href="#htools.meta.LoggerMixin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Mixin class that configures and returns a logger.</p>
+<p class="rubric">Examples</p>
+<p>class Foo(LoggerMixin):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, a, log_file):</dt><dd><p>self.a = a
+self.log_file = log_file
+self.logger = self.get_logger(log_file)</p>
+</dd>
+<dt>def walk(self, location):</dt><dd><p>self.logger.info(f’walk received argument {location}’)
+return f’walking to {location}’</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="method">
+<dt id="htools.meta.LoggerMixin.get_logger">
+<code class="sig-name descname">get_logger</code><span class="sig-paren">(</span><em class="sig-param">path=None</em>, <em class="sig-param">fmode='a'</em>, <em class="sig-param">level='info'</em>, <em class="sig-param">fmt='%(asctime)s [%(levelname)s]: %(message)s'</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.LoggerMixin.get_logger" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em><em> or </em><em>None</em>) – If provided, this will be the path the logger writes to.
+If left as None, logging will only be to stdout.</p></li>
+<li><p><strong>fmode</strong> (<em>str</em>) – Logging mode when using a log file. Default ‘a’ for
+‘append’. ‘w’ will overwrite the previously logged messages. Note:
+this only affects what happens when we create a new logger (‘w’
+will remove any existing text in the log file if it exists, while
+‘a’ won’t. But calling <cite>logger.info(my_msg)</cite> twice in a row with
+the same logger will always result in two new lines, regardless of
+mode.</p></li>
+<li><p><strong>level</strong> (<em>str</em>) – Minimum level necessary to log messages.
+One of (‘debug’, ‘info’, ‘warning’, ‘error’)</p></li>
+<li><p><strong>fmt</strong> (<em>str</em>) – Format that will be used for logging messages. This uses the
+logging module’s formatting language, not standard Python string
+formatting.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>logging.logger</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="htools.meta.MultiLogger">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">MultiLogger</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">fmode='w'</em>, <em class="sig-param">fmt='%(message)s'</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.MultiLogger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#htools.meta.LoggerMixin" title="htools.meta.LoggerMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">htools.meta.LoggerMixin</span></code></a></p>
+<p>Easy way to get a pre-configured logger. This can also be used to
+record stdout, either through the context manager provided by contextlib
+or the function decorator defined in this module.</p>
+<p>It delegates to its logger and should be used as follows when explicitly
+called by the user:</p>
+<p>logger = MultiLogger(‘train.log’)
+logger.info(‘Starting model training.’numeric)</p>
+<p>Notice we call the <cite>info</cite> method rather than <cite>write</cite>.</p>
+<dl class="method">
+<dt id="htools.meta.MultiLogger.write">
+<code class="sig-name descname">write</code><span class="sig-paren">(</span><em class="sig-param">buf</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.MultiLogger.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provided for compatibility with <cite>redirect_stdout</cite> to allow logging
+of stdout while still printing it to the screen. The user should never
+call this directly.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
 <dt id="htools.meta.ReadOnly">
-<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">ReadOnly</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.ReadOnly" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">ReadOnly</code><a class="headerlink" href="#htools.meta.ReadOnly" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Descriptor to make an attribute read-only. This means that once a value
 has been set, the user cannot change or delete it. Note that read-only
@@ -563,7 +1655,7 @@ To allow more flexibility, we do allow the user to manually manipulate the
 instance dictionary.</p>
 <p class="rubric">Examples</p>
 <dl>
-<dt>class Dog:</dt><dd><p>breed = ReadOnly(‘breed’)
+<dt>class Dog:</dt><dd><p>breed = ReadOnly()
 def __init__(self, breed, age):</p>
 <blockquote>
 <div><p># Once breed is set in the line below, it cannot be changed.
@@ -587,10 +1679,132 @@ self.age = age</p>
 <p>PermissionError: Attribute is read-only.</p>
 </dd></dl>
 
+<dl class="class">
+<dt id="htools.meta.SaveableMixin">
+<em class="property">class </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">SaveableMixin</code><a class="headerlink" href="#htools.meta.SaveableMixin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Provide object saving and loading methods. If you want to be able to
+pass a file name rather than a full path to <cite>save</cite>, the object can define
+a <cite>self.dir</cite> attribute.</p>
+<dl class="method">
+<dt id="htools.meta.SaveableMixin.load">
+<em class="property">classmethod </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.SaveableMixin.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load object from pickle file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – Name of file where object is stored.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="htools.meta.SaveableMixin.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">path=None</em>, <em class="sig-param">fname=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.SaveableMixin.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pickle object with optional compression.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – Path to save object to.</p></li>
+<li><p><strong>fname</strong> (<em>str</em><em> or </em><em>Path</em>) – If passed in, method will use this as a filename within the
+object’s <cite>dir</cite> attribute.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="exception">
 <dt id="htools.meta.TimeExceededError">
 <em class="property">exception </em><code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">TimeExceededError</code><a class="headerlink" href="#htools.meta.TimeExceededError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.add_docstring">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">add_docstring</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.add_docstring" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the docstring from another function/class to the decorated
+function/class.</p>
+<p class="rubric">Examples</p>
+<p>&#64;add_docstring(nn.Conv2d)
+class ReflectionPaddedConv2d(nn.Module):</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.add_kwargs">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">add_kwargs</code><span class="sig-paren">(</span><em class="sig-param">*fns</em>, <em class="sig-param">required=True</em>, <em class="sig-param">variable=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.add_kwargs" title="Permalink to this definition">¶</a></dt>
+<dd><p>When one or more functions are called inside another function, we often
+have the choice of accepting <a href="#id33"><span class="problematic" id="id34">**</span></a>kwargs in our outer function (downside:
+user can’t see parameter names with quick documentation tools) or
+explicitly typing out each parameter name and default (downsides: time
+consuming and error prone since it’s easy to update the inner function and
+forget to update the outer one). This lets us update the outer function’s
+signature automatically based on the inner function(s)’s signature(s).
+The Examples section should make this more clear.</p>
+<p>The wrapped function must accept <a href="#id35"><span class="problematic" id="id36">**</span></a>kwargs, but you shouldn’t refer to
+<cite>kwargs</cite> explicitly inside the function. Its variables will be made
+available essentially as global variables. This shares a related goal with
+fastai’s <cite>delegates</cite> decorator but it provides a slightly different
+solution: <cite>delegates</cite> updates the quick documentation but the variables
+are still ultimately only available as kwargs. Here, they are available
+like regular variables.</p>
+<p>Note: don’t actually use this for anything important, I imagine it could
+lead to some pretty nasty bugs. I was just determined to get something
+working.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fns</strong> (<em>functions</em>) – The inner functions whose signatures you wish to use to update the
+signature of the decorated outer function. When multiple functions
+contain a parameter with the same name, priority is determined by the
+order of <cite>fns</cite> (earlier means higher priority).</p></li>
+<li><p><strong>required</strong> (<em>bool</em>) – If True, include required arguments from inner functions (that is,
+positional arguments or positional_or_keyword arguments with no
+default value). If False, exclude these (it may be preferable to
+explicitly include them in the wrapped function’s signature).</p></li>
+<li><p><strong>variable</strong> (<em>bool</em>) – If True, include <a href="#id37"><span class="problematic" id="id38">*</span></a>kwargs and <a href="#id39"><span class="problematic" id="id40">**</span></a>kwargs from the inner functions. They
+will be made available as {inner_function_name}_args and
+{inner_function_name}_kwargs, respectively (see Examples). Otherwise,
+they will be excluded.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>def foo(x, c, <a href="#id41"><span class="problematic" id="id42">*</span></a>args, a=3, e=(11, 9), b=True, f=(‘a’, ‘b’, ‘c’), <a href="#id43"><span class="problematic" id="id44">**</span></a>kwargs):</dt><dd><p>print(‘in foo’)
+return x * c</p>
+</dd>
+<dt>def baz(n, z=’z’, x=’xbaz’, c=’cbaz’):</dt><dd><p>print(‘in baz’)
+return n + z + x + c</p>
+</dd>
+</dl>
+<p>baz comes before foo so its x param takes priority and has a default
+value of ‘xbaz’. The decorated function always retains first priority so
+the c param remains positional despite its appearance as a positional
+arg in foo.</p>
+<p>&#64;add_kwargs(baz, foo, positional=True)
+def bar(c, d=16, <a href="#id45"><span class="problematic" id="id46">**</span></a>kwargs):</p>
+<blockquote>
+<div><p>foo_res = foo(x, c, <a href="#id47"><span class="problematic" id="id48">*</span></a>foo_args, a=a, e=e, b=b, f=f, <a href="#id49"><span class="problematic" id="id50">**</span></a>foo_kwargs)
+baz_res = baz(n, z, x, c)
+return {‘c’: c, ‘n’: n, ‘d’: d, ‘x’: x, ‘z’: z, ‘a’: a,</p>
+<blockquote>
+<div><p>‘e’: e, ‘b’: b, ‘f’: f}</p>
+</div></blockquote>
+</div></blockquote>
+<p>bar ends up with the following signature:
+&lt;Signature (c, n, d=16, x=’xtri’, foo_args=(), z=’z’, <a href="#id51"><span class="problematic" id="id52">*</span></a>, a=3, e=(11, 9),</p>
+<blockquote>
+<div><p>b=True, f=(‘a’, ‘b’, ‘c’), foo_kwargs={}, <a href="#id53"><span class="problematic" id="id54">**</span></a>kwargs)&gt;</p>
+</div></blockquote>
+<p>Notice many variables are available inside the function even though they
+aren’t explicitly hard-coded into our function definition. When using
+shift-tab in Jupyter or other quick doc tools, they will all be visible.
+You can see how passing in multiple functions can quickly get messy so
+if you insist on using this, try to keep it to 1-2 functions if possible.</p>
 </dd></dl>
 
 <dl class="function">
@@ -620,6 +1834,51 @@ TypeError(can only concatenate str (not “int”) to str)</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="htools.meta.auto_repr">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">auto_repr</code><span class="sig-paren">(</span><em class="sig-param">cls</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.auto_repr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class decorator that provides __repr__ method automatically
+based on __init__ parameters. This aims to provide a simpler alternative
+to AutoInit that does not require access to the arguments passed to
+__init__. Attributes will only be included in the repr if they are in
+the class dict and appear in __init__ as a named parameter (with the
+same name).</p>
+<p class="rubric">Examples</p>
+<p>&#64;auto_repr
+class Foo:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, a, b=6, c=None, p=0.5, <a href="#id55"><span class="problematic" id="id56">**</span></a>kwargs):</dt><dd><p>self.a = a
+self.b = b
+# Different name to demonstrate that cat is not included in repr.
+self.cat = c
+# Property is not stored in class dict, not included in repr.
+self.p = p</p>
+</dd>
+</dl>
+<p>&#64;property
+def p(self):</p>
+<blockquote>
+<div><p>return self._p</p>
+</div></blockquote>
+<p>&#64;p.setter
+def p(self, val):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>if val &gt; 0:</dt><dd><p>self._p = val</p>
+</dd>
+<dt>else:</dt><dd><p>raise ValueError(‘p must be non-negative’)</p>
+</dd>
+</dl>
+</div></blockquote>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span>
+</pre></div>
+</div>
+<p>Foo(a=3, b=’b’)</p>
+</dd></dl>
+
+<dl class="function">
 <dt id="htools.meta.block_timer">
 <code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">block_timer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.block_timer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Context manager to time a block of code. This works similarly to &#64;timer
@@ -633,6 +1892,32 @@ while first != ‘100’:</p>
 <blockquote>
 <div><p>arr.pop(0)</p>
 </div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.bound_args">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">bound_args</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">args</em>, <em class="sig-param">kwargs</em>, <em class="sig-param">collapse_kwargs=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.bound_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the bound arguments for a function (with defaults applied). This is
+very commonly used when building decorators that log, check, or alter how
+a function was called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – </p></li>
+<li><p><strong>args</strong> (<em>tuple</em>) – Notice this is not <a href="#id57"><span class="problematic" id="id58">*</span></a>args. Just pass in the tuple.</p></li>
+<li><p><strong>kwargs</strong> (<em>dict</em>) – Notice this is not <a href="#id59"><span class="problematic" id="id60">**</span></a>kwargs. just pass in the dict.</p></li>
+<li><p><strong>collapse_kwargs</strong> (<em>bool</em>) – If True, collapse kwargs into the regular parameter dict. E.g.
+{‘a’: 1, ‘b’: True, ‘kwargs’: {‘c’: ‘c_val’, ‘d’: 0}} -&gt;
+{‘a’: 1, ‘b’: True, ‘c’: ‘c_val’, ‘d’: 0}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>OrderedDict[str, any]</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Maps parameter name to passed value.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -673,7 +1958,6 @@ return matrix</p>
 </div></blockquote>
 <p># Second call accesses attribute without re-computing
 # (notice no “Building matrix” message).
-&gt;&gt;&gt; v = Vocab(tokens)
 &gt;&gt;&gt; v.embedding_matrix</p>
 <dl class="simple">
 <dt>[[.03, .5, .22, .01],</dt><dd><p>[.4, .13, .06, .55]
@@ -684,42 +1968,146 @@ return matrix</p>
 
 <dl class="function">
 <dt id="htools.meta.callbacks">
-<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">callbacks</code><span class="sig-paren">(</span><em class="sig-param">*</em>, <em class="sig-param">on_begin=None</em>, <em class="sig-param">on_end=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.callbacks" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">callbacks</code><span class="sig-paren">(</span><em class="sig-param">cbs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.callbacks" title="Permalink to this definition">¶</a></dt>
 <dd><p>Decorator that attaches callbacks to a function. Callbacks should be
 defined as classes inheriting from abstract base class Callback that
-implement a __call__ method. This allows us to store states
-rather than just printing outputs or relying on global vars.</p>
+implement on_begin and on_end methods. This allows us to store states
+rather than just printing outputs or relying on global variables.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>on_begin</strong> (<em>list</em>) – Callbacks to be executed before the decorated function.</p></li>
-<li><p><strong>on_end</strong> (<em>list</em>) – Callbacks to be executed after the decorated function.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>cbs</strong> (<em>list</em>) – List of callbacks to execute before and after the decorated function.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
 <dl class="simple">
-<dt>&#64;callbacks(on_begin=[print_hyperparameters],</dt><dd><p>on_end=[plot_activation_hist, activation_means, print_output])</p>
+<dt>&#64;callbacks([PrintHyperparameters(), PlotActivationHist(),</dt><dd><p>ActivationMeans(), PrintOutput()])</p>
 </dd>
-<dt>def train(<a href="#id9"><span class="problematic" id="id10">**</span></a>kwargs):</dt><dd><p># Train model and return loss.</p>
+<dt>def train_one_epoch(<a href="#id61"><span class="problematic" id="id62">**</span></a>kwargs):</dt><dd><p># Train model.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="function">
-<dt id="htools.meta.debug_call">
-<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">debug_call</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.debug_call" title="Permalink to this definition">¶</a></dt>
-<dd><p>Decorator to help debug function calls. In general, this is not meant to
-permanently decorate a function, but rather to be used temporarily when
-debugging a function call. Note that a wrapped function that accepts <a href="#id11"><span class="problematic" id="id12">*</span></a>args
-will display a signature including an ‘args’ parameter even though it isn’t
-a named parameter, because the goal here is to explicitly show which values
-are being passed to which parameters. This does mean that the printed
-string won’t be executable code in this case, but that shouldn’t be
-necessary anyway since it would contain the same call that was just used.</p>
+<dt id="htools.meta.chainmethod">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">chainmethod</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.chainmethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator for methods in classes that want to implement
+eager chaining. Chainable methods should be instance methods
+that change 1 or more instance attributes and return None. All this
+decorator does is ensure these methods are called on a deep copy of the
+instance instead of on the instance itself so that operations don’t affect
+the original object. The new object is returned.</p>
+<p class="rubric">Examples</p>
+<p>&#64;auto_repr
+class EagerChainable:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, arr, b=3):</dt><dd><p>self.arr = arr
+self.b = b</p>
+</dd>
+</dl>
+<p>&#64;chainmethod
+def double(self):</p>
+<blockquote>
+<div><p>self.b <a href="#id63"><span class="problematic" id="id64">*</span></a>= 2</p>
+</div></blockquote>
+<p>&#64;chainmethod
+def add(self, n):</p>
+<blockquote>
+<div><p>self.arr = [x+n for x in self.arr]</p>
+</div></blockquote>
+<p>&#64;chainmethod
+def append(self, n):</p>
+<blockquote>
+<div><p>self.arr.append(n)</p>
+</div></blockquote>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ec</span> <span class="o">=</span> <span class="n">EagerChainable</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">22</span><span class="p">],</span> <span class="n">b</span><span class="o">=</span><span class="mi">17</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ec</span>
+</pre></div>
+</div>
+<p>EagerChainable(arr=[1, 3, 5, -22], b=17)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ec2</span> <span class="o">=</span> <span class="n">ec</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">99</span><span class="p">)</span><span class="o">.</span><span class="n">double</span><span class="p">()</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ec2</span>
+</pre></div>
+</div>
+<p>EagerChainable(arr=[401, 403, 405, 378, 499], b=34)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ec</span>   <span class="c1"># Remains unchanged.</span>
+<span class="go">EagerChainable(arr=[1, 3, 5, -22], b=17)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.copy_func">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">copy_func</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.copy_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy a function. Regular copy and deepcopy functionality do not work
+on functions the way they do on most objects. If we want to create a new
+function based on another without altering the old one (as in
+<cite>rename_params</cite>), this should be used.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>func</strong> (<em>function</em>) – Function being decorated.</p>
+<dd class="field-odd"><p><strong>func</strong> (<em>function</em>) – Function to duplicate.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>function</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Copy of input <cite>func</cite>.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>def foo(a, b=3, <a href="#id65"><span class="problematic" id="id66">*</span></a>args, c=5, <a href="#id67"><span class="problematic" id="id68">**</span></a>kwargs):</dt><dd><p>return a, b, c, args, kwargs</p>
+</dd>
+</dl>
+<p>foo2 = copy_func(foo)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo2</span><span class="o">.</span><span class="vm">__code__</span> <span class="o">==</span> <span class="n">foo</span><span class="o">.</span><span class="vm">__code__</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo2</span> <span class="o">==</span> <span class="n">foo</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.count_calls">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">count_calls</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.count_calls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Count the number of times a function has been called. The function can
+access this value inside itself through the attribute ‘calls’. Note that
+counting is defined such that during the first call, func.calls already=1
+(i.e. it can be considered the n’th call, not that n calls have previously
+taken place not counting the current one).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.debug">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">debug</code><span class="sig-paren">(</span><em class="sig-param">func=None</em>, <em class="sig-param">prefix=''</em>, <em class="sig-param">arguments=True</em>, <em class="sig-param">out_path=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.debug" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that prints information about a function call. Often, this
+will only be used temporarily when debugging. Note that a wrapped function
+that accepts <a href="#id69"><span class="problematic" id="id70">*</span></a>args will display a signature including an ‘args’ parameter
+even though it isn’t a named parameter, because the goal here is to
+explicitly show which values are being passed to which parameters. This
+does mean that the printed string won’t be executable code in this case,
+but that shouldn’t be necessary anyway since it would contain the same call
+that just occurred.</p>
+<p>The decorator can be used with or without arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – Function being decorated.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – A short string to prepend the printed message with. Ex: ‘&gt;&gt;&gt;’</p></li>
+<li><p><strong>arguments</strong> (<em>bool</em>) – If True, the printed message will include the function arguments.
+If False, it will print the function name but not its arguments.</p></li>
+<li><p><strong>out_path</strong> (<em>str</em><em> or </em><em>Path</em><em> or </em><em>None</em>) – If provided, a dict of arguments will be saved as a json file as
+specified by this path. Intermediate directories will be created if
+necessary. Function arguments will be made available for string
+formatting if you wish to use that in the file name.
+Example: ‘data/models/{prefix}/args.json’. The argument “prefix” will
+be used to save the file in the appropriate place. Note: <cite>arguments</cite>
+does not affect this since arguments are the only thing saved here.</p></li>
+</ul>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -729,31 +2117,500 @@ that the arguments are matching up as expected. For example, the parameter
 names in the function below have an unexpected order, so you could easily
 make the following call and expect to get 8. The debug decorator helps
 catch that the third argument is being passed in as the x parameter.</p>
-<p>&#64;debug_call
+<p>&#64;debug
 def f(a, b, x=0, y=None, z=4, c=2):</p>
 <blockquote>
 <div><p>return a + b + c</p>
 </div></blockquote>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<span class="go">f(a=3, b=4, x=1, y=None, z=4, c=9)</span>
+<span class="go">CALLING f(a=3, b=4, x=1, y=None, z=4, c=2)</span>
+<span class="go">9</span>
+</pre></div>
+</div>
+<p>&#64;debug(prefix=’<a href="#id71"><span class="problematic" id="id72">**</span></a><a href="#id73"><span class="problematic" id="id74">*</span></a>’, arguments=False)
+def f(a, b, x=0, y=None, z=4, c=2):</p>
+<blockquote>
+<div><p>return a + b + c</p>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="go">*** CALLING f()</span>
 <span class="go">9</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="function">
+<dt id="htools.meta.delegate">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">delegate</code><span class="sig-paren">(</span><em class="sig-param">attr</em>, <em class="sig-param">iter_magics=False</em>, <em class="sig-param">skip=()</em>, <em class="sig-param">getattr_=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.delegate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that automatically delegates attribute calls to an attribute
+of the class. This is a nice convenience to have when using composition.
+User can also choose to delegate magic methods related to iterables.</p>
+<p>Note: I suspect this could lead to some unexpected behavior so be careful
+using this in production.</p>
+<p>KNOWN ISSUES:
+-Max recursion error when a class inherits from nn.Module and
+delegates to the actual model.
+-Causes pickling issues at times. Haven’t figured out cause yet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>attr</strong> (<em>str</em>) – Name of variable to delegate to.</p></li>
+<li><p><strong>iter_magics</strong> (<em>bool</em>) – If True, delegate the standard magic methods related to iterables:
+‘__getitem__’, ‘__setitem__’, ‘__delitem__’, and ‘__len__’.</p></li>
+<li><p><strong>skip</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Can optionally provide a list of iter_magics to skip. This only has
+an effect when <cite>iter_magics</cite> is True. For example, you may want to be
+able to iterate over the class but no allow item deletion. In this case
+you should pass skip=(‘__delitem__’).</p></li>
+<li><p><strong>getattr_</strong> (<em>bool</em>) – If True, delegate non-magic methods. This means that if you try to
+access an attribute or method that the object produced by the decorated
+class does not have, it will look for it in the delegated object.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Example 1: We can use BeautifulSoup methods like <cite>find_all</cite> directly on
+the Page object. Most IDEs should let us view quick documentation as well.</p>
+<p>&#64;delegate(‘soup’)
+class Page:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, url, logfile, timeout):</dt><dd><p>self.soup = self.fetch(url, timeout=timeout)</p>
+</dd>
+</dl>
+<p>…</p>
+</div></blockquote>
+<p>page = Page(‘<a class="reference external" href="http://www.coursera.org">http://www.coursera.org</a>’)
+page.find_all(‘div’)</p>
+<p>Example 2: Magic methods except for __delitem__ are delegated.</p>
+<p>&#64;delegate(‘data’, True, skip=(‘__delitem__’))
+class Foo:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>def __init__(self, data, city):</dt><dd><p>self.data = data
+self.city = city</p>
+</dd>
+</dl>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">([</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">],</span> <span class="s1">&#39;San Francisco&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+<span class="go">3</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="n">char</span><span class="p">)</span>
+<span class="go">a</span>
+<span class="go">b</span>
+<span class="go">c</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span> <span class="n">f</span><span class="o">.</span><span class="n">data</span>
+<span class="go">[&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, 3]</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">del</span> <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">TypeError: &#39;Foo&#39; object doesn&#39;t support item deletion</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="o">.</span><span class="n">clear</span><span class="p">();</span> <span class="n">f</span><span class="o">.</span><span class="n">data</span>
+<span class="go">[]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.fallback">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">fallback</code><span class="sig-paren">(</span><em class="sig-param">meth=None</em>, <em class="sig-param">*</em>, <em class="sig-param">keep=()</em>, <em class="sig-param">drop=()</em>, <em class="sig-param">save=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.fallback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make instance/class attributes available as default arguments for a
+method. Kwargs can be passed in to override one or more of them. You can
+also choose for kwargs to update the instance attributes if desired.</p>
+<p>When using default values for keep/drop/save, the decorator can be used
+without parentheses. If you want to change one or more arguments, they
+must be passed in as keyword args (meth is never explicitly passed in, of
+course).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>meth</strong> (<em>method</em>) – The method to decorate. Unlike the other arguments, this is passed in
+implicitly.</p></li>
+<li><p><strong>keep</strong> (<em>Iterable</em><em>[</em><em>str</em><em>] or </em><em>str</em>) – Name(s) of instance attributes to include. If you specify a value
+here, ONLY these instance attributes will be made available as
+fallbacks. If you don’t pass in any value, the default is for all
+instance attributes to be made available. You can specify <cite>keep</cite>,
+<cite>drop</cite>, or neither, but not both. This covers all possible options:
+keep only a few, keep all BUT a few, or keep all (drop all is the
+default case and doesn’t require a decorator).</p></li>
+<li><p><strong>drop</strong> (<em>Iterable</em><em>[</em><em>str</em><em>] or </em><em>str</em>) – Name(s) of instance attributes to ignore. I.e. if you want to make
+all instance attributes available as fallbacks except for self.df,
+you could specify drop=(‘df’).</p></li>
+<li><p><strong>save</strong> (<em>bool</em>) – If True, kwargs that share names with instance attributes will be
+overwritten with their new values. E.g. if we previously had
+self.lr = 3e-3 and you call your decorated method with
+obj.mymethod(lr=1), self.lr will be set to 1.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p># Ex 1. self.a, self.b, and self.c are all available as defaults</p>
+<dl>
+<dt>class Tree:</dt><dd><dl class="simple">
+<dt>def __init__(self, a, b, c=3):</dt><dd><p>self.a = a
+self.b = b
+self.c = c</p>
+</dd>
+</dl>
+<p>&#64;fallback
+def call(self, <a href="#id75"><span class="problematic" id="id76">**</span></a>kwargs):</p>
+<blockquote>
+<div><p>return a, b, c</p>
+</div></blockquote>
+</dd>
+</dl>
+<p># Ex 2. self.b is not available as a default. We must put b in <cite>call</cite>’s
+# signature or the variable won’t be accessible.</p>
+<dl>
+<dt>class Tree:</dt><dd><dl class="simple">
+<dt>def __init__(self, a, b, c=3):</dt><dd><p>self.a = a
+self.b = b
+self.c = c</p>
+</dd>
+</dl>
+<p>&#64;fallback(drop=(‘b’))
+def call(self, b, <a href="#id77"><span class="problematic" id="id78">**</span></a>kwargs):</p>
+<blockquote>
+<div><p>return a, b, c</p>
+</div></blockquote>
+</dd>
+</dl>
+<p># Ex 3. Self.b and self.c are available as defaults. If b or c are
+# specified in kwargs, the corresponding instance attribute will be updated
+# to take on the new value.</p>
+<dl>
+<dt>class Tree:</dt><dd><dl class="simple">
+<dt>def __init__(self, a, b, c=3):</dt><dd><p>self.a = a
+self.b = b
+self.c = c</p>
+</dd>
+</dl>
+<p>&#64;fallback(keep=[‘b’, ‘c’], save=True)
+def call(self, a, <a href="#id79"><span class="problematic" id="id80">**</span></a>kwargs):</p>
+<blockquote>
+<div><p>return a, b, c</p>
+</div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.function_interface">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">function_interface</code><span class="sig-paren">(</span><em class="sig-param">present=()</em>, <em class="sig-param">required=()</em>, <em class="sig-param">defaults=()</em>, <em class="sig-param">startswith=()</em>, <em class="sig-param">args: (True</em>, <em class="sig-param">False</em>, <em class="sig-param">None) = None</em>, <em class="sig-param">kwargs: (True</em>, <em class="sig-param">False</em>, <em class="sig-param">None) = None</em>, <em class="sig-param">like_func=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.function_interface" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator factory to enforce a some kind of function signature interface
+(i.e. the first two arguments must be (‘model’, ‘x’) or the function must
+accept <a href="#id81"><span class="problematic" id="id82">**</span></a>kwargs or the parameter ‘learning_rate’ must be present but not
+required because it has a default value).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>present</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – List of parameter names that must be present in the function signature.
+This will not check anything about their order or if they’re required,
+just that they’re present.</p></li>
+<li><p><strong>required</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – List of names that must be required parameters in the function (i.e.
+they have no default value).</p></li>
+<li><p><strong>defaults</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – List of names that must be present in the function signature with
+default values.</p></li>
+<li><p><strong>startswith</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – List of names that the function signature must start with. Order
+matters.</p></li>
+<li><p><strong>args</strong> (<em>bool</em>) – If True, require function to accept <a href="#id83"><span class="problematic" id="id84">*</span></a>args. If False, require that it
+doesn’t. If None, don’t check either way.</p></li>
+<li><p><strong>kwargs</strong> (<em>bool</em>) – If True, require function to accept <a href="#id85"><span class="problematic" id="id86">**</span></a>kwargs. If False, require that it
+doesn’t. If None, don’t check either way.</p></li>
+<li><p><strong>like_func</strong> (<em>None</em><em> or </em><em>function</em>) – If provided, this function’s signature will define the interface that
+all future decorated functions must match. Their name will obviously
+be different but all parameters must match (that means names, order,
+types, defaults, etc.).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.handle">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">handle</code><span class="sig-paren">(</span><em class="sig-param">func=None</em>, <em class="sig-param">default=None</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.handle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that provides basic error handling. This is a rare decorator
+that is often most useful without the syntactic sugar: for instance,
+we may have a pre-existing function and want to apply it to a pandas Series
+while handling errors. See <cite>Examples</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>callable</em>) – The function to decorate.</p></li>
+<li><p><strong>default</strong> (<em>any</em>) – This is the value that will be returned when the wrapped function
+throws an error.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>There are a few different ways to use this function:</p>
+<p>&#64;handle
+def func():</p>
+<blockquote>
+<div><p># Do something</p>
+</div></blockquote>
+<p>&#64;handle(default=0)
+def func():</p>
+<blockquote>
+<div><p># Do something</p>
+</div></blockquote>
+<dl class="simple">
+<dt>def some_func(x):</dt><dd><p># Do something</p>
+</dd>
+</dl>
+<p>df.name.apply(handle(some_func))</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.handle_interrupt">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">handle_interrupt</code><span class="sig-paren">(</span><em class="sig-param">func=None</em>, <em class="sig-param">cbs=()</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.handle_interrupt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that allows us to interrupt a function with ctrl-c. We can
+pass in callbacks that execute on function end. Keep in mind that local
+variables will be lost as soon as <cite>func</cite> stops running. If <cite>func</cite> is a
+method, it may be appropriate to update instance variables while running,
+which we can access because the instance will be the first element of
+<cite>args</cite> (passed in as <cite>self</cite>).</p>
+<p>Note: Kwargs are passed to callbacks as a single dict, not as <a href="#id87"><span class="problematic" id="id88">**</span></a>kwargs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – </p></li>
+<li><p><strong>cbs</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="#htools.meta.Callback" title="htools.meta.Callback"><em>Callback</em></a><em>]</em>) – List of callbacks to execute when <cite>func</cite> completes. These will execute
+whether we interrupt or not.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – If True, print a message to stdout when an interrupt occurs.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.hasarg">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">hasarg</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">arg</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.hasarg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a function has a parameter with a given name. (Technically,
+hasparam might be a more appropriate name but hasarg lets us match the
+no-space convention of hasattr and getattr while maintaining readability.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – </p></li>
+<li><p><strong>arg</strong> (<em>str</em>) – The name of the parameter that you want to check for in func’s
+signature.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>bool</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>True if <cite>func</cite> has a parameter named <cite>arg</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.immutify_defaults">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">immutify_defaults</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.immutify_defaults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to make a function’s defaults arguments effectively immutable.
+We accomplish this by storing the initially provided defaults and assigning
+them back to the function’s signature after each call. If you use a
+variable as a default argument, this does not mean that the variable’s
+value will remain unchanged - it just ensures the initially provided value
+will be used for each call.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.lazychain">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">lazychain</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.lazychain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to register a method as chainable within a
+LazyChainable class.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.log_cmd">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">log_cmd</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">mode='w'</em>, <em class="sig-param">defaults=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.log_cmd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that saves the calling command for a python script. This is
+often useful for CLIs that train ML models. It makes it easy to re-run
+the script at a later date with the same or similar arguments. If importing
+a wrapped function (or class with a wrapped method), you must include</p>
+<p><cite>os.environ[‘LOG_CMD’] = ‘true’</cite></p>
+<p>in your script if you want logging to occur (accidentally overwriting log
+files unintentionally can be disastrous). Values ‘True’ and ‘1’ also work
+but True and 1 do not (os.environ requires strings). Note that these values
+will not persist once the script completes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – Specifies file where output will be saved.</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – Determines whether output should overwrite old file or be appended.
+One of (‘a’, ‘w’). In most cases we will want append mode because we’re
+tracking multiple trials.</p></li>
+<li><p><strong>defaults</strong> (<em>bool</em>) – If True, include all arg values, even those that weren’t specified
+from the command line (e.g. if your CLI function accepts up to 10 args
+(some with default values) and you pass in 3, the command will be
+logged as if you explicitly passed in all 10. This can be useful if
+you think your default args might change over time). If False, only
+args that were explicitly mentioned in your command will be used.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p><a href="#id89"><span class="problematic" id="id90">``</span></a>`
+# train.py
+import fire</p>
+<p>&#64;log_cmd(‘logs/training_runs.txt’)
+def train(lr, epochs, dropout, arch, data_version, layer_dims):</p>
+<blockquote>
+<div><p># Train model</p>
+</div></blockquote>
+<dl class="simple">
+<dt>if __name__ == ‘__main__’:</dt><dd><p>fire.Fire(train)</p>
+</dd>
+</dl>
+<p><a href="#id91"><span class="problematic" id="id92">``</span></a><a href="#id93"><span class="problematic" id="id94">`</span></a></p>
+<p>$ python train.py –lr 3e-3 –epochs 50 –dropout 0.5 –arch awd_lstm         –data_version 1 –layer_dims ‘[64, 128, 256]’         –dl_kwargs ‘{“shuffle”: False, “drop_last”: True}’</p>
+<p>After running the script with the above command, the file
+‘logs/training_runs.txt’ now contains a nicely formatted version of the
+calling command with a separate line for each argument name/value pair.</p>
+<p>We can also use variables that are passed to our function. All function
+args and kwargs will be passed to the string formatter so your variable
+names must match:</p>
+<p>&#64;log_cmd(‘logs/train_run_v{version_number}.{ext}’)
+def train(version_number, ext, epochs, arch=’lstm’):</p>
+<blockquote>
+<div><p># Train model</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.log_stdout">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">log_stdout</code><span class="sig-paren">(</span><em class="sig-param">func=None</em>, <em class="sig-param">fname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.log_stdout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that logs all stdout produced by a function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – If the decorator is used without parenthesis, the function will be
+passed in as the first argument. You never need to explicitly specify
+a function.</p></li>
+<li><p><strong>fname</strong> (<em>str</em>) – Path to log file which will be created. If None is specified, the
+default is to write to ./logs/wrapped_func_name.log. If specified,
+this must be a keyword argument.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>&#64;log_stdout
+def foo(a, b=3):</p>
+<blockquote>
+<div><p>print(a)
+a <a href="#id95"><span class="problematic" id="id96">*</span></a>= b
+print(a)
+return a**b</p>
+</div></blockquote>
+<p>&#64;log_stdout(fname=’../data/mylog.log’)
+def foo(a, b=3):</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.params">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">params</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get parameters in a functions signature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>function</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dict</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Maps name (str) to Parameter.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.rename_params">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">rename_params</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">**old2new</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.rename_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rename one or more parameters. Docstrings and default arguments are
+updated accordingly. This is useful when working with code that uses
+<cite>hasarg</cite>. For example, my Incendio library uses parameter names
+to pass the correct arguments to different metrics.</p>
+<p># TODO: looks like this updates the signature but doesn’t actually change
+the variable names. So you can’t call the decorated function with the
+new argument names.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>function</em>) – The old function to change.</p></li>
+<li><p><strong>old2new</strong> (<em>str</em>) – One or more parameter names to change and their corresponding new
+names. See Example below for a more concrete example.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>function</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Same as input <cite>func</cite> but with updated parameter names.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="simple">
+<dt>def foo(a, b, <a href="#id97"><span class="problematic" id="id98">*</span></a>args, c=3, <a href="#id99"><span class="problematic" id="id100">**</span></a>kwargs):</dt><dd><p>pass</p>
+</dd>
+</dl>
+<p>foo_metric = rename_params(func, a=y_true, b=y_pred)</p>
+<p><cite>foo_metric</cite> will work exactly like <cite>foo</cite> but its first two parameters will
+now be named “y_true” and “y_pred”, respectively.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.return_stdout">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">return_stdout</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.return_stdout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that returns printed output from the wrapped function. This
+may be useful if we define a function that only prints information and
+returns nothing, then later decide we want to access the printed output.
+Rather than re-writing everything, we can slap a &#64;return_stdout decorator
+on top and leave it as is. This should not be used if the decorated
+function already returns something else since we will only return what is
+printed to stdout. For that use case, consider the <cite>log_stdout</cite> function.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.temporary_globals">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">temporary_globals</code><span class="sig-paren">(</span><em class="sig-param">func</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.temporary_globals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a dict of key-value pairs temporarily available to a function in
+its global vars. We have to use function globals rather than globals()
+because the latter is evaluated when importing this function and so takes
+on the globals of htools/meta.py rather than of the scope where the
+code will ultimately be executed. Used in <cite>add_kwargs</cite> and <cite>fallback</cite>
+decorators (i.e. mostly for toy functionality, risky to actually use this).</p>
+</dd></dl>
+
+<dl class="function">
 <dt id="htools.meta.timebox">
-<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timebox</code><span class="sig-paren">(</span><em class="sig-param">time</em>, <em class="sig-param">strict=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timebox" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timebox</code><span class="sig-paren">(</span><em class="sig-param">seconds</em>, <em class="sig-param">strict=True</em>, <em class="sig-param">freq=0.1</em>, <em class="sig-param">cleanup=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timebox" title="Permalink to this definition">¶</a></dt>
 <dd><p>Try to execute code for specified amount of time before throwing error.
 If you don’t want to throw an error, use with a try/except block.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>time</strong> (<em>int</em>) – Max number of seconds before throwing error.</p></li>
+<li><p><strong>seconds</strong> (<em>float</em>) – Max number of seconds before throwing error. This will be enforced with
+a relatively low level of precision.</p></li>
 <li><p><strong>strict</strong> (<em>bool</em>) – If True, timeout will cause an error to be raised, halting execution of
 the entire program. If False, a warning message will be printed and
 the timeboxed operation will end, letting the program proceed to the
 next step.</p></li>
+<li><p><strong>freq</strong> (<em>float</em>) – How often to update progress bar (measured in seconds).</p></li>
+<li><p><strong>cleanup</strong> (<em>bool</em>) – If True, progress bar will disappear on function end. This is nice if
+we’re calling the decorated function inside a loop and don’t want
+hundreds of progress bars littering the notebook/terminal.</p></li>
 </ul>
 </dd>
 </dl>
@@ -782,17 +2639,19 @@ with timebox(5) as tb:</p>
 
 <dl class="function">
 <dt id="htools.meta.timeboxed">
-<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timeboxed</code><span class="sig-paren">(</span><em class="sig-param">time</em>, <em class="sig-param">strict=True</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timeboxed" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">timeboxed</code><span class="sig-paren">(</span><em class="sig-param">time</em>, <em class="sig-param">strict=True</em>, <em class="sig-param">freq=0.1</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.timeboxed" title="Permalink to this definition">¶</a></dt>
 <dd><p>Decorator version of timebox. Try to execute decorated function for
 <cite>time</cite> seconds before throwing exception.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>time</strong> (<em>int</em>) – Max number of seconds before throwing error.</p></li>
+<li><p><strong>time</strong> (<em>float</em>) – Max number of seconds before throwing error. This will be enforced with
+a relatively low level of precision.</p></li>
 <li><p><strong>strict</strong> (<em>bool</em>) – If True, timeout will cause an error to be raised, halting execution of
 the entire program. If False, a warning message will be printed and
 the timeboxed operation will end, letting the program proceed to the
 next step.</p></li>
+<li><p><strong>freq</strong> (<em>float</em>) – How often to update the progress bar (measured in seconds).</p></li>
 </ul>
 </dd>
 </dl>
@@ -864,7 +2723,7 @@ def process(x, y, z, iters=5, verbose=True):</p>
 for i in range(iters):</p>
 <blockquote>
 <div><p>if verbose: print(f’Iteration {i}…’)
-x <a href="#id13"><span class="problematic" id="id14">*</span></a>= y</p>
+x <a href="#id101"><span class="problematic" id="id102">*</span></a>= y</p>
 </div></blockquote>
 <p>return x</p>
 </div></blockquote>
@@ -888,7 +2747,7 @@ def process(x:float, y:(int, float), z, iters:int=5, verbose:bool=True):</p>
 for i in range(iters):</p>
 <blockquote>
 <div><p>if verbose: print(f’Iteration {i}…’)
-x <a href="#id15"><span class="problematic" id="id16">*</span></a>= y</p>
+x <a href="#id103"><span class="problematic" id="id104">*</span></a>= y</p>
 </div></blockquote>
 <p>return x</p>
 </div></blockquote>
@@ -955,6 +2814,82 @@ self.long = long</p>
 <span class="go">ValueError: Invalid value &#39;abc&#39; for argument long.</span>
 </pre></div>
 </div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.valuecheck">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">valuecheck</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.valuecheck" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator that checks if user-specified arguments are acceptable.
+Because this re-purposes annotations to specify values rather than types,
+this can NOT be used together with the &#64;typecheck decorator. Keep in mind
+that this tests for equality, so 4 and 4.0 are considered equivalent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>function</em>) – The function to decorate. Use annotations to specify acceptable values
+as tuples, as shown below.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>&#64;valuecheck
+def foo(a, b:(‘min’, ‘max’), c=6, d:(True, False)=True):</p>
+<blockquote>
+<div><p>return d, c, b, a</p>
+</div></blockquote>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;min&#39;</span><span class="p">)</span>
+<span class="go">(True, 6, &#39;min&#39;, 3)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="go">ValueError: Invalid argument for parameter d. Value must be in</span>
+<span class="go">(True, False).</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">foo</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;mean&#39;</span><span class="p">)</span>
+<span class="go">ValueError: Invalid argument for parameter b. Value must be in</span>
+<span class="go">(&#39;min&#39;, &#39;max&#39;).</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.verbose_log">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">verbose_log</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">fmode='w'</em>, <em class="sig-param">fmt='%(message)s'</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.verbose_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to log stdout to a file while also printing it to the screen.
+Commonly used for model training.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em><em> or </em><em>Path</em>) – Log file.</p></li>
+<li><p><strong>fmode</strong> (<em>str</em>) – One of (‘a’, ‘w’) for ‘append’ mode or ‘write’ mode. Note that ‘w’ only
+overwrites the existing file once when the decorated function is
+defined: subsequent calls to the function will not overwrite previously
+logged content.</p></li>
+<li><p><strong>fmt</strong> (<em>str</em>) – String format for logging messages. Uses formatting specific to
+<cite>logging</cite> module, not standard Python string formatting.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="htools.meta.wrapmethods">
+<code class="sig-prename descclassname">htools.meta.</code><code class="sig-name descname">wrapmethods</code><span class="sig-paren">(</span><em class="sig-param">*decorators</em>, <em class="sig-param">methods=()</em>, <em class="sig-param">internals=False</em><span class="sig-paren">)</span><a class="headerlink" href="#htools.meta.wrapmethods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class wrapper that applies 1 or more decorators to every non-magic
+method (properties are also excluded). For example, we often want &#64;debug
+to be applied to many different methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>decorators</strong> (<em>callable</em>) – 1 or more decorators to apply to methods within a class. By default,
+methods with 1 or 2 leading underscores are excluded.</p></li>
+<li><p><strong>methods</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Names of methods to wrap if you don’t want to wrap all of them.
+Internal methods can be wrapped but magic methods and properties
+cannot.</p></li>
+<li><p><strong>internals</strong> (<em>bool</em>) – If True, apply decorators to methods named with leading single
+underscores. This will be ignored if <cite>methods</cite> is specified.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
