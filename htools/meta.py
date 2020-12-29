@@ -2339,3 +2339,37 @@ def function_interface(present=(), required=(), defaults=(), startswith=(),
         return wrapper
 
     return decorator
+
+
+def mark(**kwargs):
+    """Decorator to mark a function or method with various attributes. For
+    example, we might want to mark all methods of a class that are called
+    internally by a particular method, or all the methods that are used for
+    feature engineering, or all the methods that make http calls.
+
+    Parameters
+    ----------
+    kwargs: (str, any)
+        These will be used to set attributes of the function or method.
+
+    Examples
+    --------
+    class FooBar:
+
+        @mark(http=True, priority=1)
+        def foo(self, x):
+            ...
+
+        @mark(priority=2)
+        def bar(self, x):
+            ...
+    """
+    def decorator(func):
+        for k, v in kwargs.items():
+            setattr(func, k, v)
+        @wraps(func)
+        def wrapper(*args, **kwargs_):
+            return func(*args, **kwargs_)
+        return wrapper
+    return decorator
+
