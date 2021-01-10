@@ -683,7 +683,7 @@ class LSHDict(_FuzzyDictBase):
         mode: str
             See section below `Returns`.
         n_candidates: int or None
-            Number of similar candidats to retrieve. This uses Jaccard
+            Number of similar candidates to retrieve. This uses Jaccard
             Similarity which isn't always a great metric for string
             similarity. This is also where the LSH comes in so they're not
             strictly the n best candidates, but rather a close approximation

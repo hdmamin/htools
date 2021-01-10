@@ -5,10 +5,6 @@ import operator
 import pandas as pd
 import pandas_flavor as pf
 from sklearn.model_selection import KFold
-import warnings
-
-
-warnings.filterwarnings('ignore')
 
 
 @pf.register_series_method
@@ -551,7 +547,4 @@ def highlight_rows(row, fn, highlight_color='yellow', default_color='white'):
     """
     color = highlight_color if fn(row) else default_color
     return [f'background-color: {color}'] * len(row.values)
-
-
-warnings.resetwarnings()
 
