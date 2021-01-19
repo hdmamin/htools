@@ -243,6 +243,12 @@ def delegate(attr, iter_magics=False, skip=(), getattr_=True):
 
                 setattr(cls, '__getitem__', _getitem)
 
+            if '__contains__' not in skip:
+                def _contains(self, i):
+                    return i in _delegate(self, attr)
+
+                setattr(cls, '__contains__', _contains)
+
             if '__setitem__' not in skip:
                 def _setitem(self, i, val):
                     _delegate(self, attr)[i] = val
