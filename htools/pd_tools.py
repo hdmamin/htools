@@ -1,15 +1,18 @@
 from functools import partial
 from IPython.display import display, HTML
 import matplotlib.pyplot as plt
+import numpy as np
 import operator
 import pandas as pd
 import pandas_flavor as pf
 from sklearn.model_selection import KFold
 
+from htools.core import spacer
+
 
 @pf.register_series_method
 @pf.register_dataframe_method
-def ends(df, n=3):
+def ends(df, n=2):
     """Display the first and last few rows of a dataframe.
 
     Parameters
@@ -547,4 +550,50 @@ def highlight_rows(row, fn, highlight_color='yellow', default_color='white'):
     """
     color = highlight_color if fn(row) else default_color
     return [f'background-color: {color}'] * len(row.values)
+
+
+def paginate(d, seen=()):
+    """Page through a dict of dataframes, showing for each column:
+    name, # unique, % null, standard deviation, min, max, mean, 1 non-null row
+
+    Parameters
+    ----------
+    d: dict[pd.DataFrame]
+    seen: Iterable
+        If provided, this should be a list-like container of strings (or
+        whatever type you use as keys in `d`). These are the names of the df's
+        you've already explored. A common workflow is to have a line like
+        `seen = paginate(name2df, seen)`. This way if you choose to exit the
+        loop for some additional EDA, you can easily pick up where you left
+        off.
+    """
+    seen = set(seen)
+    for i, (k, v) in enumerate(d.items(), 1):
+        if k in seen: continue
+        print(spacer())
+        print(f'{i}. {k}')
+        print(v.shape)
+        nulls = pd.DataFrame(v.isnull().mean().T)
+        # Get 1 non-null example for each column.
+        examples = pd.concat([v[col].dropna().head(1).reset_index(drop=True)
+                              for col in v], axis=1).T
+        stats = v.select_dtypes([np.number, bool]) \
+            .agg([np.mean, np.std, min, max]).T
+        pd.DataFrame(v.nunique().sort_index()) \
+            .merge(nulls, left_index=True, right_index=True) \
+            .merge(stats, how='left', left_index=True, right_index=True) \
+            .merge(examples, left_index=True, right_index=True) \
+            .rename(columns={'0_x': 'n_unique', '0_y': 'pct_null',
+                             0: 'example'}) \
+            .fillna('') \
+            .pprint(False)
+        while True:
+            cmd = input('Press <ENTER> to continue or press e to exit.')
+            if cmd == '':
+                seen.add(k)
+                break
+            elif cmd == 'e':
+                return seen
+    return seen
+
 

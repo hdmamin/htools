@@ -1527,4 +1527,29 @@ def shell(cmd):
     return res.returncode, res.stderr, res.stdout
 
 
+def set_summary(x1, x2, info=('first_only', 'second_only')):
+    """Summarize set comparison between two iterables (they will be converted
+    to sets internally).
+
+    Parameters
+    ----------
+    info: Iterable[str]
+        Determines what info to return. 'first_only' returns items only in the
+        first iterable, 'second_only' returns items only in the second, 'and'
+        returns items in both, and 'or' returns items in either.
+
+    Returns
+    -------
+    dict[str, set]: Maps str in `info` to set of items.
+    """
+    s1, s2 = set(x1), set(x2)
+    res = {'and': s1 & s2,
+           'or': s1 | s2,
+           'first_only': s1 - s2,
+           'second_only': s2 - s1}
+    for k, v in res.items():
+        print(f'{k}: {len(v)} items')
+    return select(res, keep=list(info))
+
+
 SENTINEL = object()
