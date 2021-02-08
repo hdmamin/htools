@@ -822,6 +822,35 @@ class AbstractAttrs(type):
         return inst
 
 
+class Counted:
+    """Add zero-index instance attribute "instance_num" tracking order in
+    which instances were created. Class attribute "_instance_count" tracks the
+    total number of instances of the class.
+
+        class Bar(Counted):
+    def __init__(self):
+        super().__init__()
+        self.x = x
+
+    >>> b = Bar(3)
+    >>> b2 = Bar(3)
+    >>> b.instance_num, b2.instnce_num
+    0, 1
+    >>> Bar._instance_count
+    2
+    """
+
+    def __init_subclass__(cls, **kwargs):
+        cls._instance_count = 0
+
+    def __init__(self):
+        self.instance_num = self._instance_count
+        type(self)._instance_count += 1
+
+    def __del__(self):
+        self._instance_count -= 1
+
+
 def params(func):
     """Get parameters in a functions signature.
 
