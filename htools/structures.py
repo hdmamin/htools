@@ -3,6 +3,7 @@ from copy import deepcopy
 from datasketch import MinHash, MinHashLSHForest
 from functools import partial
 from fuzzywuzzy import fuzz, process
+from heapq import heappop, heappush
 import numpy as np
 import warnings
 
@@ -845,6 +846,56 @@ class DotDict(dict):
 
     def __setstate__(self, data):
         self.update(data)
+
+
+class PriorityQueue:
+    """Creates list-like object that lets us retrieve the next item to process
+    based on some priority measure, where larger priority values get processed
+    first. This should be picklable.
+    """
+
+    def __init__(self, items=None):
+        """
+        Parameters
+        ----------
+        items: list[tuple[any, numbers.Real]]
+            Each tuple must be structured as (item, priority) where a larger
+            priority means that item will be processed sooner.
+        """
+        self._items = []
+        if items:
+            for item, priority in items:
+                self.put(item, priority)
+
+    def put(self, item, priority):
+        heappush(self._items, (priority, item))
+
+    def pop(self):
+        try:
+            return heappop(self._items)[-1]
+        except IndexError:
+            # The actual index error occurs due to the [-1] performed after
+            # heappop, so we rewrite the error message to be more useful.
+            raise IndexError('pop from empty queue')
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        """Makes PriorityQueue iterable, but note that this is a destructive
+        action: our queue will be empty if we iterate over it
+        (e.g. `for item in queue: pass`). Numeric indexing is not allowed
+        since heapq only guarantees that the first item we retrieve will be
+        the next one - it does not let us select the 3rd in line, for
+        instance.
+        """
+        try:
+            return self.pop()
+        except IndexError:
+            raise StopIteration
+
+    def __repr__(self):
+        return f'{func_name(type(self))}({self._items})'
 
 
 class IndexedDict(OrderedDict):

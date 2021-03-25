@@ -2408,3 +2408,19 @@ def mark(**kwargs):
         return wrapper
     return decorator
 
+
+def coroutine(coro):
+    """Decorator to prime a coroutine (lets us avoid calling coro.send(None)
+    before sending actual values).
+    """
+    @wraps(coro)
+    def wrapper(*args, **kwargs):
+        # Note that this is only executed once when we first create the
+        # coroutine - subsequent interactions use `send` on the existing
+        # object.
+        res = coro(*args, **kwargs)
+        res.send(None)
+        return res
+    return wrapper
+
+
