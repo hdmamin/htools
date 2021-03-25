@@ -7,7 +7,7 @@ from heapq import heappop, heappush
 import numpy as np
 import warnings
 
-from htools.core import ngrams, tolist, identity
+from htools.core import ngrams, tolist, identity, func_name
 from htools.meta import add_docstring
 
 
@@ -893,6 +893,9 @@ class PriorityQueue:
             return self.pop()
         except IndexError:
             raise StopIteration
+
+    def __contains__(self, key):
+        return key in (item for priority, item in self._items)
 
     def __repr__(self):
         return f'{func_name(type(self))}({self._items})'
