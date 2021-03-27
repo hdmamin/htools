@@ -1553,3 +1553,4 @@ def set_summary(x1, x2, info=('first_only', 'second_only')):
 
 
 SENTINEL = object()
+

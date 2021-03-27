@@ -16,10 +16,13 @@ def version(path=os.path.join('htools', '__init__.py')):
             return row.split(' = ')[-1].strip('\n').strip("'")
 
 
-setup(name='htools',
-      version=version(),
-      description='Harrison\'s custom functions.',
-      packages=find_packages(include=['htools']),
-      author='Harrison Mamin',
-      zip_safe=False,
-      install_requires=requirements())
+setup(
+    name='htools',
+    version=version(),
+    description='Harrison\'s custom functions.',
+    packages=find_packages(include=['htools']),
+    author='Harrison Mamin',
+    zip_safe=False,
+    install_requires=requirements()
+)
+

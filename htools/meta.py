@@ -6,6 +6,7 @@ from functools import wraps, partial, update_wrapper
 import inspect
 from inspect import Parameter, signature
 import io
+import json
 import logging
 import os
 from pathlib import Path
@@ -14,11 +15,13 @@ import sys
 import time
 from tqdm.auto import tqdm
 import types
+import urllib
 import warnings
 from weakref import WeakSet
 
 from htools import hdir, load, save, identity, hasstatic, tolist, select, \
     func_name
+from htools.config import STD_LIB_GIST
 
 
 class AutoInit:
@@ -849,6 +852,19 @@ class Counted:
 
     def __del__(self):
         self._instance_count -= 1
+
+
+def counted(func):
+    """Decorator to count the number of times a function has been called. The
+    count updates AFTER the call completes.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        res = func(*args, **kwargs)
+        wrapper.call_count += 1
+        return res
+    wrapper.call_count = 0
+    return wrapper
 
 
 def params(func):
@@ -2423,4 +2439,27 @@ def coroutine(coro):
         return res
     return wrapper
 
+
+@counted
+def in_standard_library(package_name):
+    """Define this in `meta` module since we require the `counted` decorator
+    so we only make the http request the first time we execute the function
+    (had trouble getting packaging arg `data_files` in setup.py to work as
+    expected). Useful for determining what pip packages need to be installed in
+    a project (if a package isn't built in, we presumably need to install it).
+
+    Parameters
+    ----------
+    package_name: str
+        Name of a package, e.g. numpy.
+
+    Returns
+    -------
+    bool: True if package is included in the standard library, False otherwise.
+    """
+    global STD_LIBS
+    if in_standard_library.call_count == 0:
+        r = urllib.request.urlopen(STD_LIB_GIST)
+        STD_LIBS = json.loads(r.read())
+    return package_name in STD_LIBS
 
