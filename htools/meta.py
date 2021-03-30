@@ -2448,6 +2448,17 @@ def in_standard_library(package_name):
     expected). Useful for determining what pip packages need to be installed in
     a project (if a package isn't built in, we presumably need to install it).
 
+    Note to self: we could also implement this like:
+
+    @mark(library=StandardLibrary())
+    def in_standard_library(package_name):
+        return package_name in in_standard_library.library
+
+    where StandardLibrary is a class with a cached_property-decorated method
+    to fetch the library list and a __contains__ method that delegates checks
+    to the resulting attribute produced by the descriptor. Still deciding which
+    pattern I prefer for the "do something on the first call" use case.
+
     Parameters
     ----------
     package_name: str
@@ -2457,9 +2468,9 @@ def in_standard_library(package_name):
     -------
     bool: True if package is included in the standard library, False otherwise.
     """
-    global STD_LIBS
+    global STANDARD_LIBRARY
     if in_standard_library.call_count == 0:
         r = urllib.request.urlopen(STD_LIB_GIST)
-        STD_LIBS = json.loads(r.read())
-    return package_name in STD_LIBS
+        STANDARD_LIBRARY = json.loads(r.read())
+    return package_name in STANDARD_LIBRARY
 
