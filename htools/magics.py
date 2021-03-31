@@ -284,3 +284,4 @@ magics = (obj for obj in map(locals().get, dir())
           and obj.__name__ != 'Magics'
           and issubclass(obj, Magics))
 get_ipython().register_magics(*magics)
+
