@@ -23,6 +23,7 @@ setup(
     packages=find_packages(include=['htools']),
     author='Harrison Mamin',
     zip_safe=False,
-    install_requires=requirements()
+    install_requires=requirements(),
+    entry_points={'console_scripts': ['htools=htools.cli:cli']}
 )
 
