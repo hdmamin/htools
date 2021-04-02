@@ -847,6 +847,9 @@ class DotDict(dict):
     def __setstate__(self, data):
         self.update(data)
 
+    def __dir__(self):
+        return self.keys()
+
 
 class PriorityQueue:
     """Creates list-like object that lets us retrieve the next item to process
