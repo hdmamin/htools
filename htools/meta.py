@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import ast
 from collections import ChainMap
 from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
@@ -2473,4 +2474,48 @@ def in_standard_library(package_name):
         r = urllib.request.urlopen(STD_LIB_GIST)
         STANDARD_LIBRARY = json.loads(r.read())
     return package_name in STANDARD_LIBRARY
+
+
+def get_module_docstring(path, default=''):
+    """Got the module level docstring from a python file.
+
+    Parameters
+    ----------
+    path: str or Path
+        File to extract docstring from. You can also pass in __file__ to get
+        the current file.
+    default: str
+        Backup value when module has no docstring.
+
+    Returns
+    -------
+    str
+    """
+    with open(path, 'r') as f:
+        tree = ast.parse(f.read())
+    return ast.get_docstring(tree) or default
+
+
+def module_docstring(func):
+    """Decorator to add the current module's docstring to a function's
+    docstring. This is intended for use in simple (1 command,
+    zero or minimal arguments) fire CLIs where I want to write a single
+    docstring for the module and function. Writing it at the module level
+    allows htools.cli.ReadmeUpdater to update the appropriate readme, while
+    this decorator ensures that the info will be available when using the
+    '--help' flag at the command line. Do NOT use this on functions in a
+    library - I've only tested it on py scripts and it relies on sys.argv, so
+    I'm pretty sure it will break outside of the intended context.
+    """
+    doc = func.__doc__ or ''
+    module_doc = get_module_docstring(sys.argv[0])
+    if doc:
+        func.__doc__ = module_doc + '\n\n' + doc
+    else:
+        func.__doc__ = module_doc
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
 
