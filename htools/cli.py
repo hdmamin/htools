@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 
 from htools.core import tolist
+from htools.meta import get_module_docstring
 
 
 def Display(lines, out):
@@ -312,6 +313,30 @@ class ReadmeUpdater:
             prev_pow = curr_pow
             prev_pre = curr_pre
         return f'{(n_bytes / 10**prev_pow):.2f} {prev_pre}'
+
+
+def module_docstring(func):
+    """Decorator to add the current module's docstring to a function's
+    docstring. This is intended for use in simple (1 command,
+    zero or minimal arguments) fire CLIs where I want to write a single
+    docstring for the module and function. Writing it at the module level
+    allows htools.cli.ReadmeUpdater to update the appropriate readme, while
+    this decorator ensures that the info will be available when using the
+    '--help' flag at the command line. Do NOT use this on functions in a
+    library - I've only tested it on py scripts and it relies on sys.argv, so
+    I'm pretty sure it will break outside of the intended context.
+    """
+    doc = func.__doc__ or ''
+    module_doc = get_module_docstring(sys.argv[0])
+    if doc:
+        func.__doc__ = module_doc + '\n\n' + doc
+    else:
+        func.__doc__ = module_doc
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
 
 
 def update_readmes(dirs, default='_'):
