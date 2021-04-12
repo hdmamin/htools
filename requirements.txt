@@ -3,6 +3,7 @@ fire>=0.3.0
 fuzzywuzzy[speedup]
 ipython
 matplotlib
+multipledispatch
 numpy
 pandas
 pandas_flavor

@@ -1,9 +1,10 @@
-from collections import namedtuple, OrderedDict
+from collections import namedtuple, OrderedDict, Iterable
 from copy import deepcopy
 from datasketch import MinHash, MinHashLSHForest
 from functools import partial
 from fuzzywuzzy import fuzz, process
 from heapq import heappop, heappush
+from multipledispatch import dispatch
 import numpy as np
 import warnings
 
@@ -902,6 +903,85 @@ class PriorityQueue:
 
     def __repr__(self):
         return f'{func_name(type(self))}({self._items})'
+
+
+class VocabDict(dict):
+    """Convenient interface for working with vocabularies where we want to map
+    from word -> index and from index -> word. Note that item deletion is not
+    supported, nor is changing the index of a key already in the dict.
+    The typical use case only involves creating the object once and leaving it.
+
+    Examples
+    --------
+    >>> w2i = {'the': 0, 'I': 1, 'door': 2, 'ocotopus': 3}
+    >>> vocab = VocabDict(w2i)
+    >>> vocab['door']
+    2
+    >>> vocab[2]
+    'door'
+    >>> vocab[[3, 0, 1]]
+    ['octopus', 'the', 'I']
+    >>> vocab['I', 2]
+    [1, 'door]
+    """
+
+    def __init__(self, w2i):
+        """
+        Parameters
+        ----------
+        w2i: Mapping[str, int]
+            Maps strings to numeric indices.
+            Ex: {'a': 0, 'the': 1, ... 'ostrich': 100}. Indices must be
+            consecutive and zero-indexed, though we don't force you to sort
+            this before calling the constructor.
+        """
+        if sorted(w2i.values()) != list(range(max(w2i.values()) + 1)):
+            raise ValueError(
+                'w2i indices must be consecutive and zero-indexed.')
+        # It's nice for the dict to be ordered appropriately, and we need to
+        # sort anyway to ensure i2w is in the correct order.
+        w2i = dict(sorted(w2i.items(), key=lambda x: x[1]))
+        super().__init__(w2i)
+        self.i2w = list(w2i)
+
+    @dispatch(int)
+    def __getitem__(self, i):
+        return self.i2w[i]
+
+    @dispatch(str)
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+
+    @dispatch(Iterable)
+    def __getitem__(self, vals):
+        return [self[v] for v in vals]
+
+    def __setitem__(self, key, i):
+        if not isinstance(key, str):
+            raise TypeError(f'key must have type str, not {type(key)}.')
+        if not isinstance(i, int):
+            raise TypeError(f'i must have type int, not {type(i)}.')
+        if key in self:
+            raise ValueError(
+                f'Key {repr(key)} is already in {type(self).__name__}.')
+        if i != len(self):
+            raise ValueError(
+                f'Invalid value i={repr(i)}. Should be {len(self)} '
+                'because indices must be consecutive.')
+        super().__setitem__(key, i)
+        self.i2w.append(key)
+
+    def __delitem__(self, key):
+        raise RuntimeError(
+            f'{type(self).__name__} does not support item deletion.')
+
+    @classmethod
+    def fromkeys(cls, keys):
+        return cls({k: i for i, k in enumerate(keys)})
+
+    def setdefault(self, key, default):
+        raise RuntimeError(
+            f'setdefault method not supported for {type(self).__name__}.')
 
 
 class IndexedDict(OrderedDict):
