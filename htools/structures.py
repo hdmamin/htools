@@ -8,7 +8,7 @@ from multipledispatch import dispatch
 import numpy as np
 import warnings
 
-from htools.core import ngrams, tolist, identity, func_name
+from htools.core import ngrams, tolist, identity, func_name, listlike, select
 from htools.meta import add_docstring
 
 
@@ -1028,3 +1028,78 @@ class LambdaDict(dict):
     def __missing__(self, key):
         self[key] = self.f(key)
         return self[key]
+
+
+class Results:
+    """Experimenting with ways to address a few shortcomings of Args and
+    DotDict, so there's some redundancy here.
+
+    1. IIRC Args is impossible to pickle, I think do some hacky naming choices
+    by me. Though I vaguely recall namedtuple itself may have similar problems
+    so that might have happened anyway.
+    2. DotDict addresses #1 (you do of course need to import htools to load
+    it, but I always have it imported anyway), but does not support tuple-style
+    unpacking.
+
+    But basically this is meant to be a simple way to return data from a
+    function, optionally pickle it, and conveniently load it again.
+    """
+
+    def __init__(self, **kwargs):
+        self._keys = list(kwargs)
+        self.__dict__.update(kwargs)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
+    def from_dict(cls, data):
+        return cls(**data)
+
+    def __repr__(self):
+        arg_strs = ", ".join(f'{k}={v!r}' for k, v in self.items())
+        return f'{type(self).__name__}({arg_strs})'
+
+    def __iter__(self):
+        yield from self.values()
+
+    def __len__(self):
+        return len(self._keys)
+
+    def __getitem__(self, i:int):
+        """Notice this accepts an integer index and returns a value, NOT a key.
+        This is because I'd like to be able to unpack this like a tuple rather
+        than a dict.
+        """
+        keys = self._keys[i]
+        if listlike(keys):
+            return type(self)(**{key: getattr(self, key) for key in keys})
+        return getattr(self, keys)
+
+    def __getstate__(self):
+        return select(vars(self), drop=['keys'])
+
+    def __setstate__(self, data):
+        self._keys = []
+        for k, v in data.items():
+            self._keys.append(k)
+            self.__dict__[k] = v
+
+    def __eq__(self, o2):
+        return vars(self) == vars(o2)
+
+    def items(self):
+        return self._asdict().items()
+
+    def keys(self):
+        return self._asdict().keys()
+
+    def values(self):
+        return self._asdict().values()
+
+    def _asdict(self):
+        """Matches namedtuple interface. Also, we can't call dict directly
+        because __getitem__ works differently than a dict so we get an error.
+        """
+        return select(vars(self), keep=self._keys)
+
