@@ -85,6 +85,7 @@ class ReadmeUpdater:
         """
         for dir_ in dirs or self.dirs:
             file_df = self._parse_dir_files(dir_)
+            if file_df.empty: continue
             # In this first scenario, we check files in the specified path but
             # update the readme of its parent. This is useful for a file
             # structure like `lib/my_library_name`: we want to parse files from
@@ -127,8 +128,9 @@ class ReadmeUpdater:
 
         # File numbering convention means these should be displayed in a
         # logical order. Sort columns so name and summary are first.
-        df = pd.DataFrame(files).sort_values('File').reset_index(drop=True)
-        return df
+        df = pd.DataFrame(files)
+        if df.empty: return df
+        return df.sort_values('File').reset_index(drop=True)
 
     def parse_file(self, path):
         """Wrapper to parse a python script or ipy notebook.
