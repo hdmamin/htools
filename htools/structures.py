@@ -820,7 +820,7 @@ class FuzzyKeyDict(_FuzzyDictBase):
         pairs = process.extract(key,
                                 self.keys(),
                                 limit=n_keys or self.n_keys,
-                                scorer=scorer or fuzz.ratio)
+                                scorer=scorer or self.scorer)
         return self._filter_similarity_pairs(pairs, mode=mode)
 
 
