@@ -1046,6 +1046,10 @@ class Results:
     """
 
     def __init__(self, **kwargs):
+        for x in ('items', 'keys', 'values', '_keys', '_asdict', 'from_dict'):
+            if x in kwargs:
+                raise ValueError(f'{x!r} is a reserved attribute name.')
+
         self._keys = list(kwargs)
         self.__dict__.update(kwargs)
 
