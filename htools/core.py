@@ -1465,7 +1465,7 @@ def kwargs_fallback(self, *args, assign=False, **kwargs):
     return res if len(res) > 1 else res[0]
 
 
-def cd_root(root_subdir='notebooks'):
+def cd_root(root_subdir='notebooks', max_depth=4):
     """Run at start of Jupyter notebook to enter project root.
 
     Parameters
@@ -1473,7 +1473,13 @@ def cd_root(root_subdir='notebooks'):
     root_subdir: str
         Name of a subdirectory contained in the project root directory.
         If not found in the current working directory, this will move
-        to the parent directory.
+        to the parent directory repeatedly until it is found. Choose carefully:
+        if you have multiple directories with the same name in your directory
+        structure (e.g. ~/htools/lib/htools), 'htools' would be a bad choice
+        if you want to end up in ~).
+    max_depth: int
+        Max number of directory levels to traverse. Don't want to get stuck in
+        an infinite loop if we make a mistake.
 
     Examples
     --------
@@ -1489,8 +1495,15 @@ def cd_root(root_subdir='notebooks'):
     same directory we'd run scripts in py/ from. This makes converting
     from notebooks to scripts easier.
     """
-    if root_subdir not in next(os.walk('.'))[1]:
+    changes = 0
+    start_dir = os.getcwd()
+    while root_subdir not in next(os.walk('.'))[1]:
+        if changes >= max_depth:
+            os.chdir(start_dir)
+            raise RuntimeError('Exceeded max_depth. Check that your '
+                               'root_subdir is <= max_depth directories away.')
         os.chdir('..')
+        changes += 1
     print('Current directory:', os.getcwd())
 
 
