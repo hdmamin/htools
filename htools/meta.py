@@ -938,7 +938,12 @@ def handle_interrupt(func=None, cbs=(), verbose=True):
     which we can access because the instance will be the first element of
     `args` (passed in as `self`).
 
-    Note: Kwargs are passed to callbacks as a single dict, not as **kwargs.
+    Notes:
+    -Kwargs are passed to callbacks as a single dict, not as **kwargs.
+    -A 'status_code' parameter tracks whether the last call was successful.
+    The decorated function obviously can't reference the status of the current
+    call since it's unknown until the function call completes, but the
+    status is updated before executing any callbacks.
 
     Parameters
     ----------
@@ -949,15 +954,19 @@ def handle_interrupt(func=None, cbs=(), verbose=True):
     verbose: bool
         If True, print a message to stdout when an interrupt occurs.
     """
-    if not func: return partial(handle_interrupt, cbs=cbs, verbose=verbose)
+    if not func:
+        return partial(handle_interrupt, cbs=tolist(cbs), verbose=verbose)
+    func.status_code = 0
     @wraps(func)
     def wrapper(*args, **kwargs):
         func_inputs = bound_args(func, args, kwargs, collapse_kwargs=False)
         try:
             res = func(*args, **kwargs)
+            wrapper.status_code = 0
         except KeyboardInterrupt:
             if verbose: print('KeyboardInterrupt. Aborting...')
             res = None
+            wrapper.status_code = 1
         finally:
             for cb in cbs:
                 cb.on_end(func, func_inputs, res)
