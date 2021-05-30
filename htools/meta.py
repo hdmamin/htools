@@ -957,9 +957,13 @@ def handle_interrupt(func=None, cbs=(), verbose=True):
     if not func:
         return partial(handle_interrupt, cbs=tolist(cbs), verbose=verbose)
     func.status_code = 0
+    for cb in cbs:
+        cb.setup(func)
     @wraps(func)
     def wrapper(*args, **kwargs):
         func_inputs = bound_args(func, args, kwargs, collapse_kwargs=False)
+        for cb in cbs:
+            cb.on_begin(func, func_inputs)
         try:
             res = func(*args, **kwargs)
             wrapper.status_code = 0
