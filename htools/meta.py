@@ -1918,13 +1918,18 @@ def block_timer():
         first = None
         while first != '100':
             arr.pop(0)
+    print(bt['duration'])
+
+    1.25   # Float measuring time spent in context manager.
     """
+    data = {}
     start = time.perf_counter()
     try:
-        yield
+        yield data
     finally:
         duration = time.perf_counter() - start
         print(f'[TIMER]: Block executed in {duration:.3f} seconds.')
+        data['duration'] = duration
 
 
 def count_calls(func):
