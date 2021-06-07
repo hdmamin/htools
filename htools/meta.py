@@ -1906,7 +1906,7 @@ def handle(func=None, default=None):
 
 
 @contextmanager
-def block_timer():
+def block_timer(name=''):
     """Context manager to time a block of code. This works similarly to @timer
     but can be used on code outside of functions.
 
@@ -1923,12 +1923,13 @@ def block_timer():
     1.25   # Float measuring time spent in context manager.
     """
     data = {}
+    if name: name = repr(name) + ' '
     start = time.perf_counter()
     try:
         yield data
     finally:
         duration = time.perf_counter() - start
-        print(f'[TIMER]: Block executed in {duration:.3f} seconds.')
+        print(f'[TIMER]: Block {name}executed in {duration:.3f} seconds.')
         data['duration'] = duration
 
 
