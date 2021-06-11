@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import signal
 import sys
+from threading import Thread
 import time
 from tqdm.auto import tqdm
 import types
@@ -627,7 +628,7 @@ class ContextDecorator(ABC):
     function decorator case effectively wants to execute the function inside a
     context manager. If you want to do something more complex, this may not be
     appropriate since it's not clear what would happen in the context manager
-    use case.
+    use case. Parentheses must be used in both cases (see examples).
 
     Examples
     --------
@@ -686,6 +687,56 @@ class ContextDecorator(ABC):
         The three arguments will all be None unless an error occurs.
         To suppress an error, this method must return True.
         """
+
+
+class Stopwatch(ContextDecorator):
+    """Print elapsed time in seconds during a function call or within a context
+    manager. Because this is a ContextDecorator, you must explicitly
+    instantiate this in both cases.
+
+    @Stopwatch()
+    def foo():
+        # Do something.
+
+    with Stopwatch():
+        # Do something.
+
+    """
+
+    def __init__(self):
+        self.thread = None
+        self.running = False
+        # Printing is not thread-safe so use logger instead. This format allows
+        # us to update a single line rather than creating endless rows of
+        # messages.
+        self.logger = MultiLogger(None, fmt='\x1b[80D\x1b[1A\x1b[K%(message)s')
+
+    def _start(self):
+        """Update elapsed time every tenth of a second."""
+        i = 1
+        while self.running:
+            time.sleep(.1)
+            self.logger.info(f'Elapsed: {round(i * .1, 1)} sec')
+            i += 1
+
+    def start(self):
+        """Start stopwatch in a new thread."""
+        self.thread = Thread(target=self._start)
+        self.thread.start()
+
+    def stop(self):
+        self.thread.join()
+
+    def __enter__(self):
+        self.running = True
+        self.start()
+
+    def __exit__(self, exc_type, exc_val, traceback):
+        """Can't easily kill thread manually so we must tell it that we're no
+        longer running.
+        """
+        self.running = False
+        self.stop()
 
 
 class AbstractAttrs(type):
