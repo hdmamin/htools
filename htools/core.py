@@ -176,6 +176,11 @@ def hsplit(text, sep, group=True, attach=True):
     """Flexible string splitting that retains the delimiter rather, unlike
     the built-in str.split() method.
 
+    NOTE: I recently observed behavior suggesting separators with special
+    characters (e.g. "\n") may not work as expected for some settings. It
+    should work when group=True and attach=True though since I rewrote that
+    with new logic without the re module.
+
     Parameters
     -----------
     text: str
@@ -230,7 +235,7 @@ def hsplit(text, sep, group=True, attach=True):
     if group:
         # Subcase 0.1
         if attach:
-            return [word for word in re.findall(regex, text)][:-1]
+            return _grouped_split(text, sep)
 
         # Subcase 0.2
         else:
@@ -247,6 +252,26 @@ def hsplit(text, sep, group=True, attach=True):
 
     # Subcase 1.2
     return [word for word in chain(*zip(words, [sep]*len(words))) if word][:-1]
+
+
+def _grouped_split(text, sep):
+    """Hsplit helper for case where group=True and attach=True (see hsplit
+    docs). Old re.find() method didn't work right when sep had special
+    characters (e.g. "\n").
+    """
+    res = []
+    toks = text.split(sep)
+    max_idx = len(toks) - 1
+    for i, tok in enumerate(toks):
+        if tok:
+            if i < max_idx: tok += sep
+            res.append(tok)
+        elif i < max_idx:
+            if res:
+                res[-1] += sep
+            else:
+                res.append(sep)
+    return res
 
 
 def rmvars(*args):

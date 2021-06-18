@@ -2463,6 +2463,42 @@ def function_interface(present=(), required=(), defaults=(), startswith=(),
     return decorator
 
 
+def lazy(func):
+    """"Decorator that provides a function with a boolean parameter "lazy".
+    When set to true, the function will not be executed yet, sort of like a
+    coroutine. (See examples.) This can be nice for testing purposes. Also
+    opens the door to some interesting things (maybe sort of allows for
+    decorated objects? Not sure of all applications yet.).
+
+    Examples
+    --------
+    @lazy
+    def foo(a, b=3):
+        return a * b
+
+    >>> foo(2)
+    6
+
+    >>> res = foo(2, lazy=True)
+    >>> res()
+    6
+
+    In the second example, notice we didn't get any output until explicitly
+    calling the result.
+    """
+    if 'lazy' in params(func):
+        raise RuntimeError(
+            f'Decorated function {func} must not have parameter named "lazy".'
+            'It will be inserted automatically.'
+        )
+    @wraps(func)
+    def wrapper(*args, lazy=False, **kwargs):
+        if lazy:
+            return lambda: func(*args, **kwargs)
+        return func(*args, **kwargs)
+    return wrapper
+
+
 def mark(**kwargs):
     """Decorator to mark a function or method with various attributes. For
     example, we might want to mark all methods of a class that are called
