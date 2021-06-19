@@ -19,6 +19,7 @@ import re
 import smtplib
 from subprocess import run
 import sys
+import time
 from tqdm.auto import tqdm
 import wordninja as wn
 
@@ -928,6 +929,48 @@ def smap(*x):
     list: Shape of each array/tensor in input.
     """
     return amap('shape', *x)
+
+
+def sleepy_range(*args, wait=1, wait_before=True):
+    """Convenience function: we often want to create a loop that mimics doing
+    some time intensive thing on each iteration. This is just like the built-in
+    range function (not technically a function!) but with a sleep period baked
+    in, making it particularly useful for list comprehensions where this would
+    be tricky otherwise. Note: unlike range, calling this is destructive.
+    See examples.
+
+    Parameters
+    ----------
+    args: int
+        Passed on to range().
+    wait: int or float
+        Number of seconds to wait on each iteration. Remember this is a keyword
+        only argument for compatibility with the range interface.
+    wait_before: bool
+        Determines whether to sleep before or after yielding the number.
+        Defaults to before to mimic "doing work" before producing some result.
+
+    Examples
+    --------
+    # Takes 6 seconds to create this list.
+    >>> [i for i in sleepy_range(3, wait=2)]
+    [0, 1, 2]
+
+    >>> srange = sleepy_range(0, 6, 2, wait_before=False)
+    >>> for i in srange:
+    >>>     print(i)
+    0
+    2
+    4
+    >>> for i in srange:
+    >>>     print(i)
+
+    # Notice this cannot be used again without manually calling sleepy_range.
+    """
+    for i in range(*args):
+        if wait_before: time.sleep(wait)
+        yield i
+        if not wait_before: time.sleep(wait)
 
 
 def method_of(meth):
