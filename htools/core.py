@@ -973,6 +973,38 @@ def sleepy_range(*args, wait=1, wait_before=True):
         if not wait_before: time.sleep(wait)
 
 
+def venumerate(iterable, start=0, freq=1, print_before=True,
+               message_format='{}'):
+    """Verbose enumerate: simple convenience function that's a drop-in
+    replacement for enumerate. It prints updates as we iterate over some
+    object. TQDM progress bar may not be available in some cases (e.g. we
+    don't know the length of the interval, or possible some cases using
+    concurrency?), and this function gives us some way to keep an eye on
+    progress. Mainly intended as a convenience for list comprehensions, since
+    in a standard for loop we could easily add this logic.
+
+    Parameters
+    ----------
+    iterable: Iterable
+        The object to iterate over.
+    start: int
+        Passed on to enumerate - the first index to use when counting.
+    freq: int
+        Frequency with which to print updates (i.e. updates are printed when
+        i is divisible by freq).
+    print_before: bool
+        Specifies whether to print the message before yielding the i'th value
+        or after.
+    message_format: str
+        Used to format the message that will be displayed when i is divisible
+        by freq. Defaults to just printing i.
+    """
+    for i, x in enumerate(iterable, start=start):
+        if i % freq == 0 and print_before: print(message_format.format(i))
+        yield i, x
+        if i % freq == 0 and not print_before: print(message_format.format(i))
+
+
 def method_of(meth):
     """Retrieve the class a method belongs to. This will NOT work on
     attributes. Also, this won't help if your goal is to retrieve an instance:
