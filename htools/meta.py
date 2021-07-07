@@ -825,7 +825,6 @@ class AbstractAttrs(type):
         # abstract parent should not define the required attributes: it merely
         # enforces the requirement that its children do. We want the children
         # to inherit class_attrs and inst_attrs without overwriting them when
-        # their own __new__ is called, so that AbstractAttrs.__call__ can
         # use them for validation. Only change this if you're very confident
         # you understand the repercussions.
         if class_attrs or inst_attrs:
@@ -889,7 +888,7 @@ class Counted:
 
     >>> b = Bar(3)
     >>> b2 = Bar(3)
-    >>> b.instance_num, b2.instnce_num
+    >>> b.instance_num, b2.instance_num
     0, 1
     >>> Bar._instance_count
     2
@@ -2463,40 +2462,46 @@ def function_interface(present=(), required=(), defaults=(), startswith=(),
     return decorator
 
 
-def lazy(func):
+def Lazy(func=None, *, lazy=True):
     """"Decorator that provides a function with a boolean parameter "lazy".
     When set to true, the function will not be executed yet, sort of like a
-    coroutine. (See examples.) This can be nice for testing purposes. Also
+    coroutine (see examples). This can be nice for testing purposes. Also
     opens the door to some interesting things (maybe sort of allows for
-    decorated objects? Not sure of all applications yet.).
+    decorated objects? Not sure of all applications yet). Would have preferred
+    a lowercase function name but I also want to keep the parameter name as
+    "lazy" while avoiding confusion.
 
     Examples
     --------
-    @lazy
+    @Lazy
     def foo(a, b=3):
         return a * b
 
-    >>> foo(2)
+    >>> foo(2, lazy=False)
     6
 
-    >>> res = foo(2, lazy=True)
+    >>> res = foo(2)
     >>> res()
     6
 
     In the second example, notice we didn't get any output until explicitly
-    calling the result.
+    calling the result. Also note that we can change the default mode by using
+    the decorator like (keyword argument, not positional):
+    @Lazy(lazy=False)
     """
+    if func is None: return partial(Lazy, lazy=lazy)
     if 'lazy' in params(func):
         raise RuntimeError(
             f'Decorated function {func} must not have parameter named "lazy".'
             'It will be inserted automatically.'
         )
     @wraps(func)
-    def wrapper(*args, lazy=False, **kwargs):
+    def wrapper(*args, lazy=lazy, **kwargs):
         if lazy:
             return lambda: func(*args, **kwargs)
         return func(*args, **kwargs)
     return wrapper
+
 
 
 def mark(**kwargs):
