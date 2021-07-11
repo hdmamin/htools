@@ -2151,7 +2151,7 @@ def global_functions(include_imported=False, include_ipy_like=False):
 
 
 def decorate_functions(decorator, include_imported=False,
-                       include_ipy_like=True):
+                       include_ipy_like=False):
     """Decorate all (or some large subset, depending on args) functions
     available in the current module's global scope. Can be useful for
     debugging (see examples).
