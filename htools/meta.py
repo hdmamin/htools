@@ -2122,11 +2122,14 @@ def temporary_globals(func, **kwargs):
                 del func.__globals__[k]
 
 
-def defined_functions(include_imported=False, include_ipy_like=False):
+def defined_functions(exclude=(), include_imported=False,
+                      include_ipy_like=False):
     """Get all available functions defined in the current module.
 
     Parameters
     ----------
+    exclude: Iterable[str]
+        Names of any functions to exclude from results.
     include_imported: bool
         If True, include imported functions (this can be a LOT of functions if
         we've used star imports, as recommended for certain libraries like
@@ -2142,6 +2145,7 @@ def defined_functions(include_imported=False, include_ipy_like=False):
     dict[str, FunctionType]: Dict mapping function name to function.
     """
     res = {}
+    exclude = set(tolist(exclude))
     modules = vars(sys.modules['__main__']).copy()
     for k, v in modules.items():
         # IPython also sometimes has vars consisting only of underscores and
@@ -2149,12 +2153,13 @@ def defined_functions(include_imported=False, include_ipy_like=False):
         # numeric unless we add a digit.
         if isinstance(v, types.FunctionType) and \
                 (include_imported or v.__module__ == '__main__') and \
-                (include_ipy_like or not (k.strip('_')+'1').isnumeric()):
+                (include_ipy_like or not (k.strip('_')+'1').isnumeric()) and \
+                k not in exclude:
             res[k] = v
     return res
 
 
-def decorate_functions(decorator, include_imported=False,
+def decorate_functions(decorator, exclude=(), include_imported=False,
                        include_ipy_like=False):
     """Decorate all (or some large subset, depending on args) functions
     available in the current module's global scope. Can be useful for
@@ -2162,6 +2167,8 @@ def decorate_functions(decorator, include_imported=False,
 
     Parameters
     ----------
+    exclude: Iterable[str]
+        Names of any functions to exclude from results.
     decorator: FunctionType
         The function that will be used to decorate all available functions.
         This must accept only a function as an argument, so make sure to pass
@@ -2191,7 +2198,8 @@ def decorate_functions(decorator, include_imported=False,
         foo(3)
         bar(4, 5)
     """
-    for k, v in defined_functions(include_imported, include_ipy_like).items():
+    for k, v in defined_functions(exclude, include_imported,
+                                  include_ipy_like).items():
         setattr(sys.modules['__main__'], k, decorator(v))
 
 
