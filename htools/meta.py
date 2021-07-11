@@ -2122,8 +2122,8 @@ def temporary_globals(func, **kwargs):
                 del func.__globals__[k]
 
 
-def global_functions(include_imported=False, include_ipy_like=False):
-    """Get all available functions in the current module.
+def defined_functions(include_imported=False, include_ipy_like=False):
+    """Get all available functions defined in the current module.
 
     Parameters
     ----------
@@ -2142,11 +2142,15 @@ def global_functions(include_imported=False, include_ipy_like=False):
     dict[str, FunctionType]: Dict mapping function name to function.
     """
     res = {}
-    for k, v in globals().items():
-        if not isinstance(v, types.FunctionType): continue
-        if not (include_imported or v.__module__ == '__main__'): continue
-        if not include_ipy_like and k.strip('_').isnumeric(): continue
-        res[k] = v
+    modules = vars(sys.modules['__main__']).copy()
+    for k, v in modules.items():
+        # IPython also sometimes has vars consisting only of underscores and
+        # those become empty strings after the strip, which evaluate to not
+        # numeric unless we add a digit.
+        if isinstance(v, types.FunctionType) and \
+                (include_imported or v.__module__ == '__main__') and \
+                (include_ipy_like or not (k.strip('_')+'1').isnumeric()):
+            res[k] = v
     return res
 
 
@@ -2183,12 +2187,12 @@ def decorate_functions(decorator, include_imported=False,
         # Do something else
 
     if __name__ == '__main__':
-        decorate_functions(debug)
+        decorate_functions(globals(), debug)
         foo(3)
         bar(4, 5)
     """
-    for k, v in global_functions(include_imported, include_ipy_like).items():
-        globals()[k] = decorator(v)
+    for k, v in defined_functions(include_imported, include_ipy_like).items():
+        setattr(sys.modules['__main__'], k, decorator(v))
 
 
 def fallback(meth=None, *, keep=(), drop=(), save=False):
