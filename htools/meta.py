@@ -21,8 +21,8 @@ import urllib
 import warnings
 from weakref import WeakSet
 
-from htools import hdir, load, save, identity, hasstatic, tolist, select, \
-    func_name
+from htools.core import hdir, load, save, identity, hasstatic, tolist,\
+    select, func_name
 from htools.config import STD_LIB_GIST
 
 
@@ -2122,6 +2122,75 @@ def temporary_globals(func, **kwargs):
                 del func.__globals__[k]
 
 
+def global_functions(include_imported=False, include_ipy_like=False):
+    """Get all available functions in the current module.
+
+    Parameters
+    ----------
+    include_imported: bool
+        If True, include imported functions (this can be a LOT of functions if
+        we've used star imports, as recommended for certain libraries like
+        htools and fastai). If False, only return functions defined in the
+        current module.
+    include_ipy_like: bool
+        Specifies whether to include functions whose names are like "_243"
+        which is how IPython seems to store previously called functions
+        (or something like that).
+
+    Returns
+    -------
+    dict[str, FunctionType]: Dict mapping function name to function.
+    """
+    res = {}
+    for k, v in globals().items():
+        if not isinstance(v, types.FunctionType): continue
+        if not (include_imported or v.__module__ == '__main__'): continue
+        if not include_ipy_like and k.strip('_').isnumeric(): continue
+        res[k] = v
+    return res
+
+
+def decorate_functions(decorator, include_imported=False,
+                       include_ipy_like=True):
+    """Decorate all (or some large subset, depending on args) functions
+    available in the current module's global scope. Can be useful for
+    debugging (see examples).
+
+    Parameters
+    ----------
+    decorator: FunctionType
+        The function that will be used to decorate all available functions.
+        This must accept only a function as an argument, so make sure to pass
+        in the appropriate object (for instance, if you want to use the
+        htools.meta.timeboxed decorator, you must call it first with the
+        desired arguments (e.g. time).
+    include_imported: bool
+        If True, include imported functions (this can be a LOT of functions if
+        we've used star imports, as recommended for certain libraries like
+        htools and fastai). If False, only return functions defined in the
+        current module.
+    include_ipy_like: bool
+        Specifies whether to include functions whose names are like "_243"
+        which is how IPython seems to store previously called functions
+        (or something like that).
+
+    Examples
+    --------
+    def foo(a):
+        # Do something
+
+    def bar(x, y):
+        # Do something else
+
+    if __name__ == '__main__':
+        decorate_functions(debug)
+        foo(3)
+        bar(4, 5)
+    """
+    for k, v in global_functions(include_imported, include_ipy_like).items():
+        globals()[k] = decorator(v)
+
+
 def fallback(meth=None, *, keep=(), drop=(), save=False):
     """Make instance/class attributes available as default arguments for a
     method. Kwargs can be passed in to override one or more of them. You can
@@ -2501,7 +2570,6 @@ def Lazy(func=None, *, lazy=True):
             return lambda: func(*args, **kwargs)
         return func(*args, **kwargs)
     return wrapper
-
 
 
 def mark(**kwargs):
