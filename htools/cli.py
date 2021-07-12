@@ -8,8 +8,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-from htools.core import tolist
-from htools.meta import get_module_docstring
+from htools.core import tolist, flatten
+from htools.meta import get_module_docstring, in_standard_library
 
 
 def Display(lines, out):
@@ -343,6 +343,130 @@ def module_docstring(func):
     return wrapper
 
 
+def module_dependencies(path, package='', exclude_std_lib=True):
+    """Find a python script's dependencies. Assumes a relatively standard
+    import structure (e.g. no programmatic imports using importlib).
+
+    Parameters
+    ----------
+    path: str or Path
+        Path to the python file in question.
+    package: str
+        If provided, this should be the name of the library the module belongs
+        to. This will help us differentiate between internal and external
+        dependencies.
+    exclude_std_lib: bool
+        Since we often use this to help generate requirements files, we don't
+        always care about built-in libraries.
+
+    Returns
+    -------
+    tuple[list]: First item contains external dependencies (e.g. torch). Second
+    item contains internal dependencies (e.g. htools.cli depends on htools.core
+    in the sense that it imports it).
+    """
+    with open(path, 'r') as f:
+        tree = ast.parse(f.read())
+    libs = []
+    internal_modules = []
+    for obj in tree.body:
+        if isinstance(obj, ast.ImportFrom):
+            parts = obj.module.split('.')
+            if parts[0] == package:
+                assert len(parts) > 1, ('Unexpected import format for: ' +
+                                        obj.module)
+                internal_modules.append('.'.join(parts[1:]))
+            else:
+                libs.append(obj.module)
+        elif isinstance(obj,  ast.Import):
+            names = [name.name for name in obj.names]
+            assert len(names) == 1, 'Import structure may be non-standard.'
+            libs.append(names[0])
+    libs = set(lib.partition('.')[0] for lib in libs)
+    if exclude_std_lib:
+        libs = (lib for lib in libs if not in_standard_library(lib))
+    return sorted(libs), sorted(internal_modules)
+
+
+def _resolve_dependencies(mod2ext, mod2int):
+    """Fully resolve dependencies: if module "a" depends on "b" in the same
+    package (an "internal" dependency), "a" implicitly depends on all of "b"'s
+    external dependencies.
+
+    Parameters
+    ----------
+    mod2ext: dict[str, list]
+        Maps module name to list of names of external dependencies (e.g.
+        torch).
+    mod2int: dict[str, list]
+        Maps module name to list of names of internal dependencies.
+
+    Returns
+    -------
+    dict[str, list]: Maps module name to list of module names (external only,
+    but accounts for implicit dependencies).
+    """
+    old = {}
+    new = {k: set(v) for k, v in mod2ext.items()}
+    # If module a depends on b and b depends on c, we may require
+    # multiple rounds of updates.
+    while True:
+        for k, v in mod2ext.items():
+            new[k].update(flatten(new[mod] for mod in mod2int[k]))
+        if old == new: break
+        old = new
+    return {k: sorted(v) for k, v in new.items()}
+
+
+def library_dependencies(lib, skip_init=True):
+    """Find libraries a library depends on. This helps us generate
+    requirements.txt files for user-built packages. It also makes it easy to
+    create different dependency groups for setup.py, allowing us to install
+    htools[meta] or htools[core] (for example) instead of all htools
+    requirements if we only want to use certain modules.
+
+    At the moment, this must be run from inside the directory containing all
+    the package code. It also doesn't handle nested packages.
+
+    Parameters
+    ----------
+    lib: str
+        Name of library.
+    skip_init: bool
+        If True, ignore the __init__.py file.
+
+    Returns
+    -------
+    dict: First item is a list of all dependencies. Second item is a dict
+    mapping module name to a list of its external dependencies. Third is a dict
+    mapping module name to a list of its internal dependencies. Fourth is a
+    dict mapping module name to a fully resolved list of external dependencies
+    (including implicit dependencies: e.g. if htools.core imports requests and
+    htools.meta imports htools.core, then htools.meta depends on requests too).
+    """
+    mod2deps = {}
+    mod2int_deps = {}
+    for path in Path('.').iterdir():
+        if path.suffix != '.py' or (skip_init and path.name == '__init__.py'):
+            continue
+        try:
+            external, internal = module_dependencies(path, lib)
+        except AssertionError as e:
+            raise RuntimeError(f'Error processing {path.name}.')
+        mod2deps[path.stem] = external
+        mod2int_deps[path.stem] = internal
+    fully_resolved = _resolve_dependencies(mod2deps, mod2int_deps)
+    return dict(overall=sorted(set(sum(mod2deps.values(), []))),
+                external=mod2deps,
+                internal=mod2int_deps,
+                resolved=fully_resolved)
+
+
+# TODO: figure out how to handle __init__.py when finding deps (maybe need to
+# wrap each star import in try/except?). Also add extra func so the CLI command
+# for find_dependencies generates text/markdown/yaml/json files we can load in
+# setup.py.
+
 def update_readmes(dirs, default='_'):
     """Update readme files with a table of info about each python file or ipy
     notebook in the relevant directory. This relies on python files having
@@ -363,6 +487,7 @@ def update_readmes(dirs, default='_'):
 
 def cli():
     fire.Fire({
-        'update_readmes': update_readmes
+        'update_readmes': update_readmes,
+        'find_dependencies': library_dependencies
     })
 
