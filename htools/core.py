@@ -381,10 +381,10 @@ def save(obj, path, mode_pre='w', verbose=True):
         Object to save. This will be pickled/jsonified/zipped inside the
         function - do not convert it before-hand.
     path: str
-        File name to save object to. Should end with .txt, .pkl, .zip, or
-        .json depending on desired output format. If .zip is used, object will
-        be zipped and then pickled. (.sh extension is also allowed and will be
-        treated identically to .txt.)
+        File name to save object to. Should end with .txt, .sh, md, .pkl, .zip,
+        or .json depending on desired output format. If .zip is used, object
+        will be zipped and then pickled. (.sh and .md will be treated
+        identically to .txt.)
     mode_pre: str
         Determines whether to write or append text. One of ('w', 'a').
     verbose: bool
@@ -398,7 +398,7 @@ def save(obj, path, mode_pre='w', verbose=True):
     path = Path(path)
     os.makedirs(path.parent, exist_ok=True)
     if verbose: print(f'Writing data to {path}.')
-    if path.suffix[1:] in ('txt', 'sh'):
+    if path.suffix[1:] in ('txt', 'sh', 'md', 'py'):
         with path.open(mode_pre) as f:
             f.write(obj)
     else:
@@ -414,7 +414,7 @@ def load(path, verbose=True):
     ----------
     path : str
         File to load. File type will be inferred from extension. Must be one of
-        '.txt', '.json', '.pkl', or '.zip'.
+        '.txt', '.sh', 'md', '.json', '.pkl', or '.zip'.
     verbose : bool, optional
         If True, will print message stating where object was loaded from.
 
@@ -423,7 +423,7 @@ def load(path, verbose=True):
     object: The Python object that was pickled to the specified file.
     """
     path = Path(path)
-    if path.suffix[1:] in ('txt', 'sh'):
+    if path.suffix[1:] in ('txt', 'sh', 'md', 'py'):
         return path.read_text()
 
     opener, mode, saver = _read_write_args(str(path), 'r')
