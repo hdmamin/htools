@@ -17,7 +17,7 @@ import pickle
 from random import choice
 import re
 import smtplib
-from subprocess import run
+from subprocess import run, check_output
 import sys
 import time
 from tqdm.auto import tqdm
@@ -1618,7 +1618,7 @@ def ngrams(word, n=3, step=1, drop_last=False):
     return ngrams_
 
 
-def shell(cmd):
+def shell(cmd, return_output=True):
     """Execute shell command (between subprocess and os, there's ~5 different
     ways to do this and I always forget which I want. This is just a way for me
     to choose once and not have to decide again. There are rare situations
@@ -1630,13 +1630,23 @@ def shell(cmd):
     ----------
     cmd: str
         Example: 'ls *.csv'
+    return_output: bool
+        If True, return the output of the command: e.g. if cmd is
+        'pip show requests', this would return a string containing information
+        about the version of the requests library you have installed. If False,
+        we return a tuple of (return code (0/1), stderr, stdout). I've noticed
+        the latter 2 are usually None though - need to read more into
+        subprocess docs to figure out why this is happening.
 
     Returns
     -------
     tuple: returncode (int), stderr, stdout. I believe stderr and stdout are
     None if nothing is returned and str otherwise.
     """
-    res = run(cmd.split())
+    parts = cmd.split()
+    if return_output:
+        return check_output(parts).decode()
+    res = run(parts)
     return res.returncode, res.stderr, res.stdout
 
 
