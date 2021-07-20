@@ -5,10 +5,13 @@ from functools import wraps
 import json
 import pandas as pd
 from pathlib import Path
+import pkg_resources as pkg
+from pkg_resources import DistributionNotFound
 import subprocess
 import sys
+import warnings
 
-from htools.core import tolist, flatten
+from htools.core import tolist, flatten, save
 from htools.meta import get_module_docstring, in_standard_library
 
 
@@ -425,8 +428,13 @@ def library_dependencies(lib, skip_init=True):
     htools[meta] or htools[core] (for example) instead of all htools
     requirements if we only want to use certain modules.
 
-    At the moment, this must be run from inside the directory containing all
-    the package code. It also doesn't handle nested packages.
+    # TODO: at the moment, this does not support:
+    - relative imports
+    - nested packages
+    - running from different directories (currently it just checks all python
+        files in the current directory)
+    - libraries whose install name differs from its import name (e.g. sklearn
+        vs. scikit-learn)
 
     Parameters
     ----------
@@ -462,6 +470,30 @@ def library_dependencies(lib, skip_init=True):
                 resolved=fully_resolved)
 
 
+def make_requirements_file(lib, skip_init=True,
+                           out_path='./requirements.txt'):
+    deps = library_dependencies(lib, skip_init)
+    
+    # Common packages where install name differs from import name. It's easy to
+    # go from install name to import name but harder to go the reverse
+    # direction.
+    import2pypi = {'sklearn': 'scikit-learn',
+                   'bs4': 'beautifulsoup4'}
+    lib2version = {}
+    for lib in deps['overall']:
+        lib = import2pypi.get(lib, lib)
+        try:
+            lib2version[lib] = pkg.get_distribution(lib).version
+        except DistributionNotFound:
+            warnings.warn('Could not find {lib} installed. You should confirm '
+                          'if its pypi name differs from its import name.')
+            lib2version[lib] = None
+    file_str = '\n'.join(f'{k}=={v}' if v else k
+                         for k, v in lib2version.items())
+    save(file_str, out_path)
+    return file_str
+
+
 # TODO: figure out how to handle __init__.py when finding deps (maybe need to
 # wrap each star import in try/except?). Also add extra func so the CLI command
 # for find_dependencies generates text/markdown/yaml/json files we can load in
@@ -488,6 +520,6 @@ def update_readmes(dirs, default='_'):
 def cli():
     fire.Fire({
         'update_readmes': update_readmes,
-        'find_dependencies': library_dependencies
+        'make_requirements': make_requirements_file
     })
 

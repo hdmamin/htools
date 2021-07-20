@@ -2194,7 +2194,7 @@ def decorate_functions(decorator, exclude=(), include_imported=False,
         # Do something else
 
     if __name__ == '__main__':
-        decorate_functions(globals(), debug)
+        decorate_functions(debug)
         foo(3)
         bar(4, 5)
     """
@@ -2701,6 +2701,40 @@ def getindex(arr, val, default=-1):
         Value to return if val is not in arr.
     """
     return arr.index(val) if val in arr else default
+
+
+def set_module_global(module, key, value):
+    """Create global variable in an imported module. This is a slightly hacky
+    workaround that solves some types of circular imports.
+
+    Parameters
+    ----------
+    module: str
+        Name of module to create variable in.
+    key: str
+        Name of variable to create in module.
+    value: any
+        Value of variable to create in module.
+    """
+    module_ = sys.modules[module]
+    if hasattr(module_, key, value):
+        warnings.warn(f'{module} has existing variable {key} that will be '
+                      f'overwritten.')
+    setattr(module_, key, value)
+
+
+def set_module_globals(module, **kwargs):
+    """Set multiple global variables in an imported module.
+
+    Parameters
+    ----------
+    module: str
+        Module name.
+    kwargs: any
+        (Key, value) pairs.
+    """
+    for k, v in kwargs.items():
+        set_module_global(module, k, v)
 
 
 class Partial:
