@@ -433,8 +433,8 @@ def library_dependencies(lib, skip_init=True):
     - nested packages
     - running from different directories (currently it just checks all python
         files in the current directory)
-    - libraries whose install name differs from its import name (e.g. sklearn
-        vs. scikit-learn)
+    - libraries whose install name differs from its import name (e.g. this will
+        return sklearn instead of scikit-learn)
 
     Parameters
     ----------
@@ -464,7 +464,8 @@ def library_dependencies(lib, skip_init=True):
         mod2deps[path.stem] = external
         mod2int_deps[path.stem] = internal
     fully_resolved = _resolve_dependencies(mod2deps, mod2int_deps)
-    return dict(overall=sorted(set(sum(mod2deps.values(), []))),
+    all_deps = set(sum(mod2deps.values(), []))
+    return dict(overall=sorted(dep.lower() for dep in all_deps),
                 external=mod2deps,
                 internal=mod2int_deps,
                 resolved=fully_resolved)
@@ -472,6 +473,9 @@ def library_dependencies(lib, skip_init=True):
 
 def make_requirements_file(lib, skip_init=True,
                            out_path='./requirements.txt'):
+    # TODO: currently only makes 1 overall requirements file. I'd like it to
+    # also generate 1 per module so we can more easily allow for different
+    # installations like htools[core], htools[cli], etc.
     deps = library_dependencies(lib, skip_init)
     
     # Common packages where install name differs from import name. It's easy to
@@ -479,14 +483,19 @@ def make_requirements_file(lib, skip_init=True,
     # direction.
     import2pypi = {'sklearn': 'scikit-learn',
                    'bs4': 'beautifulsoup4'}
+    skip = {'pkg_resources'}
     lib2version = {}
     for lib in deps['overall']:
+        print(lib)
+        if lib in skip: continue
         lib = import2pypi.get(lib, lib)
         try:
             lib2version[lib] = pkg.get_distribution(lib).version
         except DistributionNotFound:
-            warnings.warn('Could not find {lib} installed. You should confirm '
-                          'if its pypi name differs from its import name.')
+            warnings.warn(
+                f'Could not find {lib} installed. You should confirm '
+                'if its pypi name differs from its import name.'
+            )
             lib2version[lib] = None
     file_str = '\n'.join(f'{k}=={v}' if v else k
                          for k, v in lib2version.items())
