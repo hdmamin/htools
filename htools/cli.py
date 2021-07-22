@@ -460,7 +460,7 @@ def library_dependencies(lib, skip_init=True):
         try:
             external, internal = module_dependencies(path, lib)
         except AssertionError as e:
-            raise RuntimeError(f'Error processing {path.name}.')
+            raise RuntimeError(f'Error processing {path.name}: {e}')
         mod2deps[path.stem] = external
         mod2int_deps[path.stem] = internal
     fully_resolved = _resolve_dependencies(mod2deps, mod2int_deps)
@@ -472,7 +472,7 @@ def library_dependencies(lib, skip_init=True):
 
 
 def make_requirements_file(lib, skip_init=True,
-                           out_path='./requirements.txt'):
+                           out_path='../requirements.txt'):
     # TODO: currently only makes 1 overall requirements file. I'd like it to
     # also generate 1 per module so we can more easily allow for different
     # installations like htools[core], htools[cli], etc.
@@ -481,12 +481,15 @@ def make_requirements_file(lib, skip_init=True,
     # Common packages where install name differs from import name. It's easy to
     # go from install name to import name but harder to go the reverse
     # direction.
-    import2pypi = {'sklearn': 'scikit-learn',
-                   'bs4': 'beautifulsoup4'}
+    import2pypi = {
+        'bs4': 'beautifulsoup4',
+        'sklearn': 'scikit-learn',
+        'pil': 'pillow',
+        'yaml': 'pyyaml',
+    }
     skip = {'pkg_resources'}
     lib2version = {}
     for lib in deps['overall']:
-        print(lib)
         if lib in skip: continue
         lib = import2pypi.get(lib, lib)
         try:
@@ -497,8 +500,13 @@ def make_requirements_file(lib, skip_init=True,
                 'if its pypi name differs from its import name.'
             )
             lib2version[lib] = None
-    file_str = '\n'.join(f'{k}=={v}' if v else k
-                         for k, v in lib2version.items())
+
+    # Need to sort again because different between import name and install name
+    # can mess up our ordering.
+    file_str = '\n'.join(
+        f'{k}=={v}' if v else k for k, v in
+        sorted(lib2version.items(), key=lambda x: x[0])
+    )
     save(file_str, out_path)
     return file_str
 
