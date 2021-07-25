@@ -347,13 +347,28 @@ def module_docstring(func):
 
 
 def _pypi_safe_name(name):
+    """Try to map from import name to install name. Going the other direction
+    is straightforward using pkg_resources but this is harder.
+
+    Parameters
+    ----------
+    name: str
+        Import name of library, e.g. sklearn, requests.
+
+    Returns
+    -------
+    str: Install name of library. This is NOT foolproof: we make a few
+    hard-coded replacements for popular libraries (sklearn -> scikit-learn)
+    and replace underscores with dashes, but there's no guarantee this will
+    catch everything.
+    """
     # Common packages where install name differs from import name. It's easy to
     # go from install name to import name but harder to go the reverse
     # direction.
     import2pypi = {
         'bs4': 'beautifulsoup4',
         'sklearn': 'scikit-learn',
-        'pil': 'pillow',
+        'PIL': 'pillow',
         'yaml': 'pyyaml',
     }
     return import2pypi.get(name, name.replace('_', '-'))
@@ -494,17 +509,20 @@ def library_dependencies(lib, skip_init=True):
         mod2int_deps[path.stem] = internal
     fully_resolved = _resolve_dependencies(mod2deps, mod2int_deps)
     all_deps = set(sum(mod2deps.values(), []))
-    return dict(overall=sorted(dep.lower() for dep in all_deps),
+    return dict(overall=sorted(all_deps),
                 external=mod2deps,
                 internal=mod2int_deps,
                 resolved=fully_resolved)
 
 
+def _libs2readme_str(lib2version):
+    return '\n'.join(f'{k}=={v}' if v else k for k, v in lib2version.items())
+
+
+# TODO: might be cleaner to compile all this readme functionality into a single
+# class.
 def make_requirements_file(lib, skip_init=True, make_resolved=False,
                            out_path='../requirements.txt'):
-    # TODO: currently only makes 1 overall requirements file. I'd like it to
-    # also generate 1 per module so we can more easily allow for different
-    # installations like htools[core], htools[cli], etc.
     deps = library_dependencies(lib, skip_init)
     lib2version = {}
     for lib in deps['overall']:
@@ -519,17 +537,20 @@ def make_requirements_file(lib, skip_init=True, make_resolved=False,
 
     # Need to sort again because different between import name and install name
     # can mess up our ordering.
-    file_str = '\n'.join(f'{k}=={v}' if v else k
-                         for k, v in lib2version.items())
+    file_str = _libs2readme_str(lib2version)
     save(file_str, out_path)
 
-    # TODO
+    # If desired, generate a json mapping each module to its own requirements
+    # file. Modules with no dependencies will not have a key. The json file
+    # can then be loaded in setup.py to easily create a number of different
+    # `install_requires` variants.
     if make_resolved:
-        module2readme = dict.fromkeys(deps['resolved'])
+        out_dir = Path(out_path).parent
+        module2readme = {}
         for mod, libs in deps['resolved'].items():
-            module2readme[mod] = '\n'.join(lib2version[lib] for lib in libs)
-        save(module2readme, Path(out_path).parent/'module2readme.json')
-    # TODO
+            readme = _libs2readme_str({lib: lib2version[lib] for lib in libs})
+            if readme: module2readme[mod] = readme
+        save(module2readme, out_dir/'module2readme.json')
 
     return file_str
 
