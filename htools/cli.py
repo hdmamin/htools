@@ -500,7 +500,7 @@ def library_dependencies(lib, skip_init=True):
                 resolved=fully_resolved)
 
 
-def make_requirements_file(lib, skip_init=True,
+def make_requirements_file(lib, skip_init=True, make_resolved=False,
                            out_path='../requirements.txt'):
     # TODO: currently only makes 1 overall requirements file. I'd like it to
     # also generate 1 per module so we can more easily allow for different
@@ -522,6 +522,15 @@ def make_requirements_file(lib, skip_init=True,
     file_str = '\n'.join(f'{k}=={v}' if v else k
                          for k, v in lib2version.items())
     save(file_str, out_path)
+
+    # TODO
+    if make_resolved:
+        module2readme = dict.fromkeys(deps['resolved'])
+        for mod, libs in deps['resolved'].items():
+            module2readme[mod] = '\n'.join(lib2version[lib] for lib in libs)
+        save(module2readme, Path(out_path).parent/'module2readme.json')
+    # TODO
+
     return file_str
 
 
