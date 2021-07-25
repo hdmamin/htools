@@ -2203,6 +2203,52 @@ def decorate_functions(decorator, exclude=(), include_imported=False,
         setattr(sys.modules['__main__'], k, decorator(v))
 
 
+def register_functions(prefix):
+    """Construct a dict of certain functions defined in a module. This lets
+    scripts that import the module access these functions dynamically using a
+    dict rather than using getattr messiness, importlib (which makes imports
+    invisible to htools requirements.txt builder), or eval usage. See Examples.
+
+    Parameters
+    ----------
+    prefix
+
+    Returns
+    -------
+    dict[str, function]
+
+    Examples
+    --------
+    # modeling.py
+
+    def fit_knn(x, y, **kwargs):
+        return knn(**kwargs).fit(x, y)
+
+    def fit_nn(x, y, **kwargs):
+        module = Network(**kwargs)
+        module.train(x, y)
+        return module
+
+    def helper_function(z):
+        return z
+
+    FIT_FUNCS = register_functions(prefix='fit_')
+
+    # train.py
+    import fire
+    from modeling import FIT_FUNCS
+
+    def train(model):
+        x, y = load_xy()
+        FIT_FUNCS[model](x, y)
+
+    if __name__ == '__main__':
+        fire.Fire(train)
+    """
+    return {k.split(prefix)[-1]: v for k, v in defined_functions().items()
+            if k.startswith(prefix)}
+
+
 def fallback(meth=None, *, keep=(), drop=(), save=False):
     """Make instance/class attributes available as default arguments for a
     method. Kwargs can be passed in to override one or more of them. You can
