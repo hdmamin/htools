@@ -346,9 +346,28 @@ def module_docstring(func):
     return wrapper
 
 
+def _pypi_safe_name(name):
+    # Common packages where install name differs from import name. It's easy to
+    # go from install name to import name but harder to go the reverse
+    # direction.
+    import2pypi = {
+        'bs4': 'beautifulsoup4',
+        'sklearn': 'scikit-learn',
+        'pil': 'pillow',
+        'yaml': 'pyyaml',
+    }
+    return import2pypi.get(name, name.replace('_', '-'))
+
+
 def module_dependencies(path, package='', exclude_std_lib=True):
     """Find a python script's dependencies. Assumes a relatively standard
     import structure (e.g. no programmatic imports using importlib).
+
+    # TODO: at the moment, this does not support:
+    - relative imports
+    - libraries whose install name differs from its import name aside from
+    popular cases like scikit-learn (in other cases, this would return the
+    equivalent of "sklearn")
 
     Parameters
     ----------
@@ -357,6 +376,7 @@ def module_dependencies(path, package='', exclude_std_lib=True):
     package: str
         If provided, this should be the name of the library the module belongs
         to. This will help us differentiate between internal and external
+        dependencies. Make sure to provide this if you want internal
         dependencies.
     exclude_std_lib: bool
         Since we often use this to help generate requirements files, we don't
@@ -368,6 +388,12 @@ def module_dependencies(path, package='', exclude_std_lib=True):
     item contains internal dependencies (e.g. htools.cli depends on htools.core
     in the sense that it imports it).
     """
+    # `skip` is for packages that are imported and aren't on pypi but don't
+    # show up as being part of the standard library (in the case of pkg_
+    # resources, I believe it's part of a library that IS part of the standard
+    # library but from the way it's imported that's not clear to our parser.
+    # These MUST be import names (not install names) if they differ.
+    skip = {'pkg_resources'}
     with open(path, 'r') as f:
         tree = ast.parse(f.read())
     libs = []
@@ -383,9 +409,11 @@ def module_dependencies(path, package='', exclude_std_lib=True):
                 libs.append(obj.module)
         elif isinstance(obj,  ast.Import):
             names = [name.name for name in obj.names]
-            assert len(names) == 1, 'Import structure may be non-standard.'
+            assert len(names) == 1, f'Error parsing import: {names}.'
             libs.append(names[0])
-    libs = set(lib.partition('.')[0] for lib in libs)
+    # Make sure to filter out `skip` before applying _pypi_safe_name.
+    libs = set(_pypi_safe_name(lib.partition('.')[0]) for lib in libs
+               if lib not in skip)
     if exclude_std_lib:
         libs = (lib for lib in libs if not in_standard_library(lib))
     return sorted(libs), sorted(internal_modules)
@@ -433,8 +461,9 @@ def library_dependencies(lib, skip_init=True):
     - nested packages
     - running from different directories (currently it just checks all python
         files in the current directory)
-    - libraries whose install name differs from its import name (e.g. this will
-        return sklearn instead of scikit-learn)
+    - libraries whose install name differs from its import name except for
+    popular cases like scikit-learn (in other cases, this would return the
+    equivalent of "sklearn")
 
     Parameters
     ----------
@@ -477,21 +506,8 @@ def make_requirements_file(lib, skip_init=True,
     # also generate 1 per module so we can more easily allow for different
     # installations like htools[core], htools[cli], etc.
     deps = library_dependencies(lib, skip_init)
-    
-    # Common packages where install name differs from import name. It's easy to
-    # go from install name to import name but harder to go the reverse
-    # direction.
-    import2pypi = {
-        'bs4': 'beautifulsoup4',
-        'sklearn': 'scikit-learn',
-        'pil': 'pillow',
-        'yaml': 'pyyaml',
-    }
-    skip = {'pkg_resources'}
     lib2version = {}
     for lib in deps['overall']:
-        if lib in skip: continue
-        lib = import2pypi.get(lib, lib)
         try:
             lib2version[lib] = pkg.get_distribution(lib).version
         except DistributionNotFound:
@@ -503,10 +519,8 @@ def make_requirements_file(lib, skip_init=True,
 
     # Need to sort again because different between import name and install name
     # can mess up our ordering.
-    file_str = '\n'.join(
-        f'{k}=={v}' if v else k for k, v in
-        sorted(lib2version.items(), key=lambda x: x[0])
-    )
+    file_str = '\n'.join(f'{k}=={v}' if v else k
+                         for k, v in lib2version.items())
     save(file_str, out_path)
     return file_str
 
