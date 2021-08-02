@@ -5,6 +5,7 @@ from functools import partial
 from fuzzywuzzy import fuzz, process
 from heapq import heappop, heappush
 from multipledispatch import dispatch
+from numbers import Integral
 import numpy as np
 import warnings
 
@@ -944,7 +945,7 @@ class VocabDict(dict):
         super().__init__(w2i)
         self.i2w = list(w2i)
 
-    @dispatch(int)
+    @dispatch(Integral)
     def __getitem__(self, i):
         return self.i2w[i]
 
