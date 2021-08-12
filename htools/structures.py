@@ -7,6 +7,7 @@ from heapq import heappop, heappush
 from multipledispatch import dispatch
 from numbers import Integral
 import numpy as np
+from tqdm.auto import tqdm
 import warnings
 
 from htools.core import ngrams, tolist, identity, func_name, listlike, select
@@ -668,7 +669,7 @@ class LSHDict(_FuzzyDictBase):
         necessary because dict specifically calls its own __setitem__, not
         its children's.
         """
-        for k, v in self.items():
+        for k, v in tqdm(self.items()):
             self._update_forest(k, v, False)
         self.forest.index()
 
