@@ -24,6 +24,8 @@ setup(
     author='Harrison Mamin',
     zip_safe=False,
     install_requires=requirements(),
+    extras_require={'fuzzy': ['fuzzywuzzy'],
+                    'speedup': ['fuzzywuzzy[speedup]']},
     entry_points={'console_scripts': ['htools=htools.cli:cli']}
 )
 
