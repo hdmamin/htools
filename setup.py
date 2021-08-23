@@ -24,6 +24,8 @@ setup(
     author='Harrison Mamin',
     zip_safe=False,
     install_requires=requirements(),
+    # If installing speedup causes gcc error in docker image, try
+    # adding `apt install build-essentials`.
     extras_require={'fuzzy': ['fuzzywuzzy'],
                     'speedup': ['fuzzywuzzy[speedup]']},
     entry_points={'console_scripts': ['htools=htools.cli:cli']}

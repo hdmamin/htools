@@ -124,7 +124,7 @@ def hasarg(func, arg):
 
 
 def quickmail(subject, message, to_email, from_email=None, img_path=None,
-              img_name=None, verbose=True):
+              img_name=None, verbose=True, password=None):
     """Send an email.
 
     Parameters
@@ -147,7 +147,7 @@ def quickmail(subject, message, to_email, from_email=None, img_path=None,
     if not from_email: return None
 
     # Load email password.
-    password = get_credentials(from_email)
+    password = password or get_credentials(from_email)
     if not password: return None
 
     # Create message and add text if specified.
