@@ -1998,6 +1998,37 @@ def count_calls(func):
     return wrapper
 
 
+def min_wait(seconds):
+    """Decorator that skips executing the decorated function if it was executed
+    very recently (within a user-specified wait period).
+    The resulting function's `last_called` attribute stores the value of
+    perf_counter when it was last executed.
+
+    Parameters
+    ----------
+    seconds: int or float
+        Minimum wait period. If you try to execute the function < `wait`
+        seconds after its last execution, it will return None.
+    """
+    if seconds >= 60 or seconds < 1:
+        warnings.warn('min_wait is intended to be used with wait periods of a '
+                      'few seconds. Wait periods under a second or over a '
+                      'minute are not recommended - they may work but I '
+                      'don\'t know.')
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_called = getattr(wrapper, 'last_called', float('-inf'))
+            wrapper.last_called  = time.perf_counter()
+            if wrapper.last_called - last_called < seconds:
+                print(f'Not calling: function was called less than {seconds} '
+                      'seconds ago.')
+                return
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def copy_func(func):
     """Copy a function. Regular copy and deepcopy functionality do not work
     on functions the way they do on most objects. If we want to create a new

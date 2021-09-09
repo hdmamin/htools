@@ -36,6 +36,9 @@ fire.core.Display = Display
 
 # Start of htools CLI below. Stuff above is to import when building new CLIs
 # in other projects.
+# TODO: adjust readme updater init so we can pass in lib-dirs and non-lib dirs
+# separately. Ran into some annoying issues where setup.py in parent doesn't
+# actually mean a dir is a package.
 class ReadmeUpdater:
     """This is generally intended for a structure where each directory contains
     either python scripts OR jupyter notebooks - I haven't tested it on
