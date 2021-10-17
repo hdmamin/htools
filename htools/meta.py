@@ -2794,7 +2794,7 @@ def set_module_global(module, key, value):
         Value of variable to create in module.
     """
     module_ = sys.modules[module]
-    if hasattr(module_, key, value):
+    if hasattr(module_, key):
         warnings.warn(f'{module} has existing variable {key} that will be '
                       f'overwritten.')
     setattr(module_, key, value)

@@ -1,6 +1,7 @@
 from functools import partial
 from IPython.display import display, HTML
 import matplotlib.pyplot as plt
+from numbers import Number
 import numpy as np
 import operator
 import pandas as pd
@@ -8,6 +9,7 @@ import pandas_flavor as pf
 from sklearn.model_selection import KFold
 
 from htools.core import spacer
+from htools import set_module_global
 
 
 @pf.register_series_method
@@ -496,6 +498,75 @@ def verbose_plot(df, nrows=None, **kwargs):
     df.plot(**kwargs)
     df.head(nrows).pprint()
     plt.show()
+
+
+@pf.register_dataframe_method
+def fuzzy_groupby(df, col, model=None, cats=5, fuzzy_col=True,
+                  globalize_vecs='_vecs', **kwargs):
+    """Pandas method to group by a string column using fuzzy matching using
+    SentenceTransformers. Categories can be passed in or selected automatically
+    as the most common values in the data.
+
+    Note: this method will try to import things from the sentence_transformers
+    package. I chose not to include that in the htools dependencies since this
+    is sort of niche/experimental functionality and I don't want to require
+    transformers for all installs.
+
+    Parameters
+    ----------
+    col: str
+        Column name to group by.
+    model: SentenceTransformer or None
+        By default, we use the 'all-MiniLM-L6-v2' model. This maps each piece
+        of text to a 384 dimensional vector. In theory, this should work with
+        texts of varying lengths (sentences, paragraphs, etc.) and allow us to
+        compare them without issue, though YMMV.
+    cats: Iterable[str] or int
+        Each item in col will be mapped to one of these categories based on the
+        cosine similarity between it and each category. If an integer is
+        provided, this defaults to the n most common items in col.
+        Depending on your data, there's no guarantee these will be particularly
+        good choices. Clustering algorithms might be a better starting
+        place but I still have to think about how that would work (with some
+        of sentence_transformers' clustering methods, not everything is
+        assigned to a cluster).
+    fuzzy_col: bool or str
+        If Truthy, we add a new column to df containing the cat each item was
+        mapped to. A string argument will be used as the new col name while a
+        value of True will default to f'{col}_fuzzy'.
+    globalize_vecs: str
+        If True, store resulting vectors (technically a rank 2 tensor) in a
+        global variable with this name. We do this rather than returning them
+        because a common workflow is something like:
+        df.fuzzy_groupby('color').age.mean()
+        Having fuzzy_groupby return a tuple would therefore be somewhat
+        awkward.
+    kwargs: any
+        Additional kwargs to pass to model.encode() when creating vectors.
+
+    Returns
+    -------
+    pd.DataFrameGroupBy
+    """
+    from sentence_transformers.util import cos_sim
+
+    if not model:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+    if isinstance(cats, Number):
+        cats = df[col].value_counts().head(cats).index.tolist()
+    vals = df[col].unique()
+    cat_vecs = model.encode(cats, **kwargs)
+    val_vecs = model.encode(vals, **kwargs)
+    sim_mat = cos_sim(val_vecs, cat_vecs)
+    w2cat = {val: cats[i] for val, i in zip(vals, sim_mat.argmax(1))}
+    assigned_cats = df[col].map(w2cat)
+    if fuzzy_col:
+        title = (fuzzy_col if isinstance(fuzzy_col, str) else f'{col}_fuzzy')
+        df[title] = assigned_cats
+    if globalize_vecs:
+        set_module_global('__main__', globalize_vecs, val_vecs)
+    return df.groupby(assigned_cats)
 
 
 def anti_join(df_left, df_right, left_on=None, right_on=None, **kwargs):
