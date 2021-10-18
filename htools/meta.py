@@ -88,7 +88,10 @@ class AutoInit:
         )
         self._init_keys = set(bound.arguments.keys())
         for k, v in bound.arguments.items():
-            setattr(self, k, v)
+            try:
+                setattr(self, k, v)
+            except Exception as e:
+                warnings.warn(f'Failed to set attribute {k}. {str(v)}')
 
     def __repr__(self):
         """Returns string representation of child class including variables
