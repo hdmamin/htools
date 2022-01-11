@@ -12,6 +12,7 @@ import logging
 import os
 from pathlib import Path
 import signal
+import ssl
 import sys
 from threading import Thread
 import time
@@ -2742,6 +2743,9 @@ def in_standard_library(package_name):
     """
     global STANDARD_LIBRARY
     if in_standard_library.call_count == 0:
+        # Brew-installed versions of python sometimes don't include the
+        # necessary certificate for http requests to work.
+        ssl._create_default_https_context = ssl._create_unverified_context
         r = urllib.request.urlopen(STD_LIB_GIST)
         STANDARD_LIBRARY = json.loads(r.read())
     return package_name in STANDARD_LIBRARY
