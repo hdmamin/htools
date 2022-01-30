@@ -4,13 +4,16 @@ from collections import ChainMap
 from contextlib import contextmanager, redirect_stdout
 from copy import copy, deepcopy
 from functools import wraps, partial, update_wrapper
+from fuzzywuzzy import fuzz, process
+import importlib
 import inspect
-from inspect import Parameter, signature, _empty
+from inspect import Parameter, signature, _empty, getsource
 import io
 import json
 import logging
 import os
 from pathlib import Path
+import pkgutil
 import signal
 import ssl
 import sys
@@ -2282,6 +2285,59 @@ def register_functions(prefix):
     """
     return {k.split(prefix)[-1]: v for k, v in defined_functions().items()
             if k.startswith(prefix)}
+
+
+def source_code(name, lib_name='htools'):
+    """Find the snippet of source code for a class/function defined in some
+    library (usually htools). Like `inspect.getsource` except you just pass it
+    strings and it handles all the imports.
+
+    Warning: this was initially intended solely for use on htools-defined
+    functionality, and it wasn't til afterwards that I realized it might extend
+    reasonably well to other libraries. Known limitations: built in libraries
+    (e.g. os) and big libraries with nested file structures (e.g. fastai)
+    generally won't work.
+
+    Parameters
+    ----------
+    name: str
+        Class or function (usually defined in htools) that you want to see
+        source code for.
+    lib_name: str
+        Name of library to check in, usually 'htools'.
+
+    Returns
+    -------
+    tuple[str]: First item is the htools source code of the function/class
+    (if not found, this is empty). Second item is a string that is either empty
+    (if the function/class was found) or the name of a class/function most
+    similar to the user-specified `name` if not.
+    """
+    if lib_name not in locals():
+        lib = importlib.import_module(lib_name)
+    else:
+        lib = sys.modules[lib_name]
+
+    # As of version 6.3.1, htools __init__ imports most modules so we can often
+    # find the desired object as an attribute of the module itself. But we
+    # might change that behavior in the future so the pkutil method is a good
+    # fallback (and even now, it's needed for pd_tools methods).
+    names = set()
+    no_match = ''
+    for mod, mod_name, _ in pkgutil.iter_modules(lib.__path__):
+        try:
+            module = getattr(lib, mod_name)
+            src = getsource(getattr(module, name))
+            return src, no_match
+        except AttributeError as e:
+            with open(lib.__path__[0] + f'/{mod_name}.py', 'r') as f:
+                tree = ast.parse(f.read())
+            names.update(x.name for x in tree.body
+                         if isinstance(x, (ast.ClassDef, ast.FunctionDef)))
+    backup = ''
+    if names:
+        backup = process.extract(name, names, limit=1, scorer=fuzz.ratio)[0][0]
+    return no_match, backup
 
 
 def fallback(meth=None, *, keep=(), drop=(), save=False):

@@ -3,6 +3,7 @@ from datetime import datetime
 import fire
 from functools import wraps
 from fuzzywuzzy import process, fuzz
+import importlib
 from inspect import getsource
 import json
 import pandas as pd
@@ -16,7 +17,7 @@ import sys
 import warnings
 
 from htools.core import tolist, flatten, save
-from htools.meta import get_module_docstring, in_standard_library
+from htools.meta import get_module_docstring, in_standard_library, source_code
 
 
 def Display(lines, out):
@@ -599,57 +600,17 @@ def update_readmes(dirs, default='_'):
     parser.update_dirs()
 
 
-def _htools_source(name, import_if_needed=True):
-    """Find the snippet of source code for a class/function defined in htools.
-
-    Parameters
-    ----------
-    name: str
-        Class or function defined in htools that you want to see source code
-        for.
-    import_if_needed: bool
-        If htools hasn't been imported already, import it.
-
-    Returns
-    -------
-    tuple[str]: First item is the htools source code of the function/class
-    (if not found, this is empty). Second item is a string that is either empty
-    (if the function/class was found) or the name of a class/function most
-    similar to the user-specified `name` if not.
-    """
-    if import_if_needed and 'htools' not in locals():
-        import htools
-
-    # As of version 6.3.1, htools __init__ auto-imports most modules, but we
-    # might change that behavior in the future. So it's safer to use pkgutil
-    # rather than getattr(htools, name). Also, we currently don't auto-import
-    # everything from the pd_tools and cli modules.
-    names = set()
-    no_match = ''
-    for mod, mod_name, _ in pkgutil.iter_modules(htools.__path__):
-        try:
-            module = getattr(htools, mod_name)
-            src = getsource(getattr(module, name))
-            return src, no_match
-        except AttributeError as e:
-            # If we can't find the requested function/class, we suggest the
-            # nmost similar match (the name, not the source code).
-            with open(htools.__path__[0] + f'/{mod_name}.py', 'r') as f:
-                tree = ast.parse(f.read())
-            names.update(x.name for x in tree.body
-                         if isinstance(x, (ast.ClassDef, ast.FunctionDef)))
-    # If no match is found, suggest the closest string match.
-    return no_match, process.extract(name, names, limit=1,
-                                     scorer=fuzz.ratio)[0][0]
-
-
-def htools_source(name, copy=False):
+def source(name, lib='htools', copy=False):
     """Print or copy the source code of a class/function defined in htools.
 
     Parameters
     ----------
     name: str
         Class or function defined in htools.
+    lib: str
+        Name of library containing `name`, usually 'htools'. Won't work on
+        the standard library or large complex libraries (specifically, those
+        with nested file structures).
     copy: bool
         If True, copy the source code the clipboard. If False, simply print it
         out.
@@ -664,10 +625,14 @@ def htools_source(name, copy=False):
     # -c flag will simply print out the source code.
     htools src auto_repr -c
     """
-    src, backup_name = _htools_source(name, import_if_needed=True)
+    src, backup_name = source_code(name, lib_name=lib)
     if not src:
-        print(f'`{name}` not found in htools. We suggest trying the command:\n'
-              f'htools src {backup_name}')
+        print(f'Failed to retrieve `{name}` source code from {lib}.')
+        if backup_name != name:
+            cmd = f'{lib} src {backup_name}'
+            if lib != 'htools':
+                cmd += f' --lib = {lib}'
+            print(f'We suggest trying the command:\n\n{cmd}')
     if copy:
         pyperclip.copy(src)
     else:
@@ -678,6 +643,6 @@ def cli():
     fire.Fire({
         'update_readmes': update_readmes,
         'make_requirements': make_requirements_file,
-        'src': htools_source
+        'src': source
     })
 
