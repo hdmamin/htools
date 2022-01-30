@@ -6,6 +6,7 @@ multipledispatch
 numpy
 pandas
 pandas_flavor
+pyperclip
 scikit-learn
 tqdm
 wordninja>=2.0.0

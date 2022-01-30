@@ -2,11 +2,15 @@ import ast
 from datetime import datetime
 import fire
 from functools import wraps
+from fuzzywuzzy import process, fuzz
+from inspect import getsource
 import json
 import pandas as pd
 from pathlib import Path
 import pkg_resources as pkg
 from pkg_resources import DistributionNotFound
+import pyperclip
+import pkgutil
 import subprocess
 import sys
 import warnings
@@ -526,6 +530,20 @@ def _libs2readme_str(lib2version):
 # class.
 def make_requirements_file(lib, skip_init=True, make_resolved=False,
                            out_path='../requirements.txt'):
+    """Generate a requirements.txt file for a project by extracting imports
+    from the python source code.
+
+    Parameters
+    ----------
+    lib: str
+    skip_init: bool
+    make_resolved: bool
+    out_path: str
+
+    Returns
+    -------
+    str
+    """
     deps = library_dependencies(lib, skip_init)
     lib2version = {}
     for lib in deps['overall']:
@@ -581,9 +599,85 @@ def update_readmes(dirs, default='_'):
     parser.update_dirs()
 
 
+def _htools_source(name, import_if_needed=True):
+    """Find the snippet of source code for a class/function defined in htools.
+
+    Parameters
+    ----------
+    name: str
+        Class or function defined in htools that you want to see source code
+        for.
+    import_if_needed: bool
+        If htools hasn't been imported already, import it.
+
+    Returns
+    -------
+    tuple[str]: First item is the htools source code of the function/class
+    (if not found, this is empty). Second item is a string that is either empty
+    (if the function/class was found) or the name of a class/function most
+    similar to the user-specified `name` if not.
+    """
+    if import_if_needed and 'htools' not in locals():
+        import htools
+
+    # As of version 6.3.1, htools __init__ auto-imports most modules, but we
+    # might change that behavior in the future. So it's safer to use pkgutil
+    # rather than getattr(htools, name). Also, we currently don't auto-import
+    # everything from the pd_tools and cli modules.
+    names = set()
+    no_match = ''
+    for mod, mod_name, _ in pkgutil.iter_modules(htools.__path__):
+        try:
+            module = getattr(htools, mod_name)
+            src = getsource(getattr(module, name))
+            return src, no_match
+        except AttributeError as e:
+            # If we can't find the requested function/class, we suggest the
+            # nmost similar match (the name, not the source code).
+            with open(htools.__path__[0] + f'/{mod_name}.py', 'r') as f:
+                tree = ast.parse(f.read())
+            names.update(x.name for x in tree.body
+                         if isinstance(x, (ast.ClassDef, ast.FunctionDef)))
+    # If no match is found, suggest the closest string match.
+    return no_match, process.extract(name, names, limit=1,
+                                     scorer=fuzz.ratio)[0][0]
+
+
+def htools_source(name, copy=False):
+    """Print or copy the source code of a class/function defined in htools.
+
+    Parameters
+    ----------
+    name: str
+        Class or function defined in htools.
+    copy: bool
+        If True, copy the source code the clipboard. If False, simply print it
+        out.
+
+    Returns
+    -------
+    str: Source code of htools class/function.
+
+    Examples
+    --------
+    # Copies source code of auto_repr decorator to clipboard. Excluding the
+    # -c flag will simply print out the source code.
+    htools src auto_repr -c
+    """
+    src, backup_name = _htools_source(name, import_if_needed=True)
+    if not src:
+        print(f'`{name}` not found in htools. We suggest trying the command:\n'
+              f'htools src {backup_name}')
+    if copy:
+        pyperclip.copy(src)
+    else:
+        print(src)
+
+
 def cli():
     fire.Fire({
         'update_readmes': update_readmes,
-        'make_requirements': make_requirements_file
+        'make_requirements': make_requirements_file,
+        'src': htools_source
     })
 
