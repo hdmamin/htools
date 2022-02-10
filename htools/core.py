@@ -10,6 +10,7 @@ from email import encoders
 from inspect import signature, getattr_static, ismethod, getmembers, getmodule
 from itertools import chain
 import json
+import mimetypes
 from multiprocessing import Pool
 import os
 from pathlib import Path
@@ -123,8 +124,10 @@ def hasarg(func, arg):
     return arg in signature(func).parameters
 
 
-def quickmail(subject, message, to_email, from_email=None, img_path=None,
-              img_name=None, verbose=True, password=None):
+# def quickmail(subject, message, to_email, from_email=None, img_path=None,
+#               img_name=None, verbose=True, password=None):
+def quickmail(subject, message, to_email, from_email=None,
+              attach_path=None, attach_name=None, verbose=True, password=None):
     """Send an email.
 
     Parameters
@@ -158,12 +161,25 @@ def quickmail(subject, message, to_email, from_email=None, img_path=None,
     if message: msg.attach(MIMEText(message))
 
     # Load and attach image.
-    if img_path:
-        with open(img_path, 'rb') as f:
-            img = MIMEImage(f.read(),
-                            name=img_name or os.path.basename(img_path))
-        encoders.encode_base64(img)
-        msg.attach(img)
+    if attach_path:
+        ftype = mimetypes.guess_type(attach_path)[0].split('/')[0]
+        if ftype == 'text':
+            mime_cls = MIMEText
+            mode = 'r'
+            encoder = identity
+            kwargs = {}
+        elif ftype == 'image':
+            mime_cls = MIMEImage
+            mode = 'rb'
+            encoder = encoders.encode_base64
+            kwargs = {'name': attach_name or os.path.basename(attach_path)}
+        else:
+            raise ValueError('Attached file should be a text or image file. '
+                             f'We parsed your file as type {ftype}.')
+        with open(attach_path, mode) as f:
+            attachment = mime_cls(f.read(), **kwargs)
+        encoder(attachment)
+        msg.attach(attachment)
 
     # Access server and send email.
     server = smtplib.SMTP(host='smtp.gmail.com', port=587)
