@@ -181,6 +181,11 @@ def delegate(attr, iter_magics=False, skip=(), getattr_=True):
     iter_magics: bool
         If True, delegate the standard magic methods related to iterables:
         '__getitem__', '__setitem__', '__delitem__', and '__len__'.
+        # TODO: maybe consider adding __contains__? It most cases it should be
+        fine - I believe python falls back to rely on __getitem__ - but if the
+        object being delegated to defines some special __contains__ logic that
+        is different than iterating using __getitem__, we might run into
+        problems.
     skip: Iterable[str]
         Can optionally provide a list of iter_magics to skip. This only has
         an effect when `iter_magics` is True. For example, you may want to be

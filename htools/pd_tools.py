@@ -556,6 +556,7 @@ def fuzzy_groupby(df, col, model=None, cats=5, fuzzy_col=True,
     if isinstance(cats, Number):
         cats = df[col].value_counts().head(cats).index.tolist()
     vals = df[col].unique()
+    kwargs = {'show_progress_bar': True, **kwargs}
     cat_vecs = model.encode(cats, **kwargs)
     val_vecs = model.encode(vals, **kwargs)
     sim_mat = cos_sim(val_vecs, cat_vecs)
