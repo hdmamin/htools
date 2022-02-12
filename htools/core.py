@@ -127,19 +127,27 @@ def hasarg(func, arg):
 # def quickmail(subject, message, to_email, from_email=None, img_path=None,
 #               img_name=None, verbose=True, password=None):
 def quickmail(subject, message, to_email, from_email=None,
-              attach_path=None, attach_name=None, verbose=True, password=None):
+              attach_paths=(), verbose=True, password=None):
     """Send an email.
 
     Parameters
     -----------
-    from_email: str
-        Gmail address being used to send email.
-    to_email: str
-        Recipient's email.
     subject: str
         Subject line of email.
     message: str
         Body of email.
+    to_email: str
+        Recipient's email. This can also be a verizon phone number in the form
+        3332221111@vtext.com (notice no extra leading 1), in which case this
+        will send an sms. In theory, you should be able to send mms
+        (i.e. include image(s)) by using a format like 3332221111@vzwtext.com,
+        but this doesn't seem to be working as of 2/10/22.
+    from_email: str
+        Gmail address being used to send email.
+    attach_paths: str or listlike
+        Paths to files to attach. Currently supports text (.txt, .md, etc.;
+        as of 2/11/22, gmail blocks executable attachments like .py)
+        and image (.jpg, .png, etc.) files.
 
     Returns
     --------
@@ -161,8 +169,8 @@ def quickmail(subject, message, to_email, from_email=None,
     if message: msg.attach(MIMEText(message))
 
     # Load and attach image.
-    if attach_path:
-        ftype = mimetypes.guess_type(attach_path)[0].split('/')[0]
+    for path in tolist(attach_paths):
+        ftype = mimetypes.guess_type(path)[0].split('/')[0]
         if ftype == 'text':
             mime_cls = MIMEText
             mode = 'r'
@@ -172,12 +180,16 @@ def quickmail(subject, message, to_email, from_email=None,
             mime_cls = MIMEImage
             mode = 'rb'
             encoder = encoders.encode_base64
-            kwargs = {'name': attach_name or os.path.basename(attach_path)}
+            kwargs = {'name': os.path.basename(path)}
         else:
             raise ValueError('Attached file should be a text or image file. '
                              f'We parsed your file as type {ftype}.')
-        with open(attach_path, mode) as f:
+        with open(path, mode) as f:
             attachment = mime_cls(f.read(), **kwargs)
+        # show up as an attachment rather than an embedded object, but
+        # sometimes the later might be preferable.
+        attachment.add_header('Content-Disposition', 'attachment',
+                              filename=os.path.basename(path))
         encoder(attachment)
         msg.attach(attachment)
 
