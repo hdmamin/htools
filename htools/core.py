@@ -168,8 +168,8 @@ def quickmail(subject, message, to_email, from_email=None,
     msg['To'] = to_email
     if message: msg.attach(MIMEText(message))
 
-    # Load and attach image.
-    for path in tolist(attach_paths):
+    # Load and attach file(s). Paths must be strings, not Paths, for mimetypes.
+    for path in map(str, tolist(attach_paths)):
         ftype = mimetypes.guess_type(path)[0].split('/')[0]
         if ftype == 'text':
             mime_cls = MIMEText

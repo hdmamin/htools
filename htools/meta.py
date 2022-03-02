@@ -344,6 +344,8 @@ class LoggerMixin:
         formatter = logging.Formatter(fmt)
         handlers = [logging.StreamHandler(sys.stdout)]
         if path:
+            # TODO: realized this breaks if we just pass in a file name,
+            # e.g. tmp.log rather than logs/tmp.log.
             os.makedirs(os.path.dirname(path), exist_ok=True)
             handlers.append(logging.FileHandler(path, fmode))
         for handler in handlers:
