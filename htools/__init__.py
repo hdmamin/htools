@@ -4,4 +4,4 @@ from htools import pd_tools
 from htools.structures import *
 
 
-__version__ = '6.3.6'
+__version__ = '6.3.7'

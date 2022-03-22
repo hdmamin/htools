@@ -1587,6 +1587,47 @@ def valuecheck(func):
     return wrapper
 
 
+def deprecated(func=None, *, msg=''):
+    """Decorator to mark a function as deprecated. This serves as both
+    documentation (seeing it in the code is a good reminder) and also provides
+    a warning if/when the function is called.
+
+    Parameters
+    ----------
+    func: FunctionType
+        Passed in to the decorator automatically.
+    msg: str (optional)
+        You may specify a more specific warning message to display when the
+        function is called. This MUST be passed in as a keyword argument,
+        not positional. If you don't mind using the default, use the
+        no-parentheses form of the decorator.
+
+    Examples
+    --------
+    @deprecated
+    def my_old_func():
+        # ...
+
+    @deprecated(msg='My custom message!')
+    def my_old_func():
+        # ...
+    """
+    if func:
+        assert callable(func), \
+            '`deprecated` received a non-callable argument instead of a '\
+            'function. If you meant to pass in msg, it must be a keyword arg.'
+    else:
+        return partial(deprecated, msg=msg)
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        warnings.warn(
+            msg or f'Soft deprecation: {func_name(func)} should not be used '
+                   f'anymore.')
+        return func(*args, **kwargs)
+    return wrapper
+
+
 def debug(func=None, prefix='', arguments=True, out_path=None):
     """Decorator that prints information about a function call. Often, this
     will only be used temporarily when debugging. Note that a wrapped function

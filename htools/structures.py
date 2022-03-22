@@ -748,6 +748,11 @@ class FuzzyKeyDict(_FuzzyDictBase):
 
     Pickling seems to work but I would use this with caution.
 
+    TODO: consider desired behavior for comparing dict and FuzzyKeyDict with
+    the same keys/values. Currently return equal but I could see an argument
+    for either way, given that their type's behavior is rather different but
+    this is still a subclass of dict.
+
     Examples
     --------
     d = FuzzyKeyDict(limit=3)
