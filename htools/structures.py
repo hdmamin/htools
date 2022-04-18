@@ -879,7 +879,8 @@ class PriorityQueue:
                 self.put(item, priority)
 
     def put(self, item, priority):
-        heappush(self._items, (priority, item))
+        # Negate priority because package only provides min heap.
+        heappush(self._items, (-priority, item))
 
     def pop(self):
         try:
@@ -1064,14 +1065,14 @@ class Results:
     def from_dict(cls, data):
         return cls(**data)
 
-    def from_dict(cls, data):
-        return cls(**data)
-
     def __repr__(self):
         arg_strs = ", ".join(f'{k}={v!r}' for k, v in self.items())
         return f'{type(self).__name__}({arg_strs})'
 
     def __iter__(self):
+        """Unlike dict, iterate over values because this is still closer to a
+        tuple at heart. Keys are honestly more like documentation here.
+        """
         yield from self.values()
 
     def __len__(self):

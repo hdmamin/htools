@@ -124,8 +124,6 @@ def hasarg(func, arg):
     return arg in signature(func).parameters
 
 
-# def quickmail(subject, message, to_email, from_email=None, img_path=None,
-#               img_name=None, verbose=True, password=None):
 def quickmail(subject, message, to_email, from_email=None,
               attach_paths=(), verbose=True, password=None):
     """Send an email.
@@ -384,11 +382,6 @@ def _read_write_args(path, mode):
         file with.
     """
     ext = path.rpartition('.')[-1]
-    if ext not in {'json', 'pkl', 'zip'}:
-        raise InvalidArgumentError(
-            'Invalid extension. Make sure your filename ends with '
-            '.json, .pkl, or .zip.'
-        )
 
     # Store in dict to make it easier to add additional formats in future.
     ext2data = {
@@ -396,6 +389,12 @@ def _read_write_args(path, mode):
         'pkl': (open, 'b', pickle),
         'zip': (BZ2File, '', pickle),
     }
+    if ext not in ext2data:
+        raise InvalidArgumentError(
+            'Invalid extension. Make sure your filename ends with '
+            '.json, .pkl, or .zip.'
+        )
+
     opener, mode_suffix, saver = ext2data[ext]
     return opener, mode + mode_suffix, saver
 

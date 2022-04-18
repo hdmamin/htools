@@ -3040,3 +3040,29 @@ class Partial:
 
     def __str__(self):
         return str(self.func).replace(self.old_name, self.__name__)
+
+
+class ReturningThread(Thread):
+    """
+    # TODO: consider creating a separate concurrency.py module? Have to
+    consider dependencies, e.g. this uses meta.add_docstring, so meta.py would
+    not be able to use functionality from concurrency.py.
+    """
+
+    @add_docstring(Thread)
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs=None, *, daemon=None):
+        """This is identical to a regular thread except that the join method
+        returns the value returned by your target function. The
+        Thread.__init__ docstring is shown below for the sake of convenience.
+        """
+        super().__init__(group=group, target=target, name=name,
+                         args=args, kwargs=kwargs, daemon=daemon)
+        self.result = None
+
+    def run(self):
+        self.result = self._target(*self._args, **self._kwargs)
+
+    def join(self, timeout=None):
+        super().join(timeout)
+        return self.result
