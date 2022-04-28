@@ -15,9 +15,10 @@ from multiprocessing import Pool
 import os
 from pathlib import Path
 import pickle
-from random import choice
+from random import choice, choices
 import re
 import smtplib
+from string import ascii_letters
 from subprocess import run, check_output
 import sys
 import time
@@ -1700,6 +1701,26 @@ def set_summary(x1, x2, info=('first_only', 'second_only')):
     for k, v in res.items():
         print(f'{k}: {len(v)} items')
     return select(res, keep=list(info))
+
+
+def random_str(length, lower=False, valid=tuple(ascii_letters + '0123456789')):
+    """Generate random string of alphanumeric characters.
+
+    Parameters
+    ----------
+    length: int
+        Number of characters in output string.
+    lower: bool
+        If True, the output will be lowercased.
+    valid: Iterable
+        List-like container of valid characters (strings) to sample from.
+
+    Returns
+    -------
+    str: `length` characters long.
+    """
+    text = ''.join(choices(valid, k=length))
+    return text.lower() if lower else text
 
 
 SENTINEL = object()
