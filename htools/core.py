@@ -1292,7 +1292,7 @@ def xor_none(*args, n=1):
     return a value so we get None.
     """
     if sum(bool(arg is not None) for arg in args) != n:
-        raise ValueError(f'Exactly {n} or args must be not None.')
+        raise ValueError(f'Exactly {n} of args must be not None.')
 
 
 def max_key(d, fn=identity):

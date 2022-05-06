@@ -65,7 +65,7 @@ class TrieNode:
     class rather than here.
     """
 
-    def __init__(self, data=()):
+    def __init__(self, data=(), depth=0):
         """
         Parameters
         ----------
@@ -75,6 +75,7 @@ class TrieNode:
         """
         self.edges = {}
         self.stop_state = False
+        self.depth = depth
         for x in tolist(data):
             self.append(x)
 
@@ -84,7 +85,7 @@ class TrieNode:
             return
         x = seq[0]
         if x not in self.edges:
-            self.edges[x] = TrieNode()
+            self.edges[x] = TrieNode(depth=self.depth + 1)
         self.edges[x].append(seq[1:])
 
     def __repr__(self):
@@ -101,7 +102,7 @@ class Trie:
     the Trie.
     """
 
-    def __init__(self, values=(), suffix=False):
+    def __init__(self, values=(), suffix=False, node_cls=TrieNode):
         """
         Parameters
         ----------
@@ -111,7 +112,8 @@ class Trie:
             tokens), tuples of integers, etc. As of Dec 2020, this should NOT
             be numpy arrays or torch tensors.
         """
-        self.head = TrieNode()
+        self.node_cls = node_cls
+        self.head = node_cls()
         if suffix:
             self._maybe_reverse = lambda x: x[::-1]
         else:
@@ -178,7 +180,7 @@ class Trie:
         for x in seq:
             if x not in node.edges:
                 # Return this so __contains__ can check its stop state.
-                return TrieNode()
+                return self.node_cls()
             node = node.edges[x]
         return node
 

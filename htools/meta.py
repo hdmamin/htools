@@ -753,6 +753,28 @@ class Stopwatch(ContextDecorator):
         self.stop()
 
 
+class class_or_instancemethod(classmethod):
+    """Decorate a method so it can be called as both an instancemethod and a
+    classmethod. The first argument to the method will be either the instance
+    OR the class, depending on how it's called.
+
+    Examples
+    --------
+    class Foo:
+
+        @class_or_instancemethod
+        def bar(self, x):
+            if isinstance(self, type):
+                # Classmethod functionality.
+            else:
+                # Instancemethod functionality.
+    """
+
+    def __get__(self, instance, cls):
+        get = super().__get__ if instance is None else self.__func__.__get__
+        return get(instance, cls)
+
+
 class AbstractAttrs(type):
     """Basically the attribute equivalent of abc.abstractmethod: this allows
     us to define an abstract parent class that requires its children to
