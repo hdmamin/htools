@@ -1498,6 +1498,19 @@ def spacer(char='-', n_chars=79, newlines_before=1, newlines_after=1):
     return '\n'*newlines_before + char * n_chars + '\n'*newlines_after
 
 
+def hr(char='-', n_chars=79, newlines_before=1, newlines_after=1):
+    """Horizontal rule: print a line, usually to visually separate printed
+    outputs in a for loop. Same as spacer() but this includes the print call
+    instead of just returning a string. Basically, I want to keep spacer to
+    support old code that relies on it, but I wanted something a little
+    quicker/simpler than calling print(spacer()).
+    """
+    print(
+        spacer(char, n_chars,
+               newlines_before=newlines_before, newlines_after=newlines_after)
+    )
+
+
 def func_name(func):
     """Usually just returns the name of a function. The difference is this is
     compatible with functools.partial, which otherwise makes __name__
