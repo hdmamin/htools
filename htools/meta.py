@@ -7,7 +7,7 @@ from functools import wraps, partial, update_wrapper
 from fuzzywuzzy import fuzz, process
 import importlib
 import inspect
-from inspect import Parameter, signature, _empty, getsource
+from inspect import Parameter, signature, _empty, getsource, ismethod
 import io
 import json
 import logging
@@ -3062,6 +3062,36 @@ class Partial:
 
     def __str__(self):
         return str(self.func).replace(self.old_name, self.__name__)
+
+
+class OwnerAwareAttrsMixin:
+    """Mixin class that makes instance variables "aware" of the instance they
+    belong to (when possible). This may be easier to illustrate by example:
+
+    class Trainer(OwnerAwareAttrsMixin):
+        def __init__(self, model, out_dir):
+            self.model = model
+            self.out_dir = out_dir
+
+    >>> trainer = Trainer(model, 'models/1.0.0')
+    >>> trainer.model.owner
+    <__main__.Trainer at 0x7fc9e212d860>
+    >>> trainer.out_dir.owner
+    AttributeError: 'str' object has no attribute 'parent'
+    >>> trainer._owner_aware_attrs
+    {'model'}
+    """
+    _aware_attrs_name = '_owner_aware_attrs'
+
+    def __setattr__(self, key, val):
+        super().__setattr__(key, val)
+        if not hasattr(self, self._aware_attrs_name):
+            setattr(self, self._aware_attrs_name, set())
+        try:
+            setattr(val, 'owner', self)
+            getattr(self, self._aware_attrs_name).add(key)
+        except:
+            pass
 
 
 class ReturningThread(Thread):
