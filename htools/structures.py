@@ -10,7 +10,8 @@ import numpy as np
 from tqdm.auto import tqdm
 import warnings
 
-from htools.core import ngrams, tolist, identity, func_name, listlike, select
+from htools.core import ngrams, tolist, identity, func_name, listlike, select,\
+    parallelize
 from htools.meta import add_docstring
 
 
@@ -561,7 +562,7 @@ class _FuzzyDictBase(dict):
             )
 
 
-class LSHDict(_FuzzyDictBase):
+class NewLSHDict(_FuzzyDictBase):
     """Dictionary that returns the value corresponding to a key's nearest
     neighbor if the key isn't present in the dict. This is intended for use
     as a word2index dict when using embeddings in deep learning: e.g. if we
@@ -594,7 +595,7 @@ class LSHDict(_FuzzyDictBase):
     """
 
     def __init__(self, data, n_candidates=None, n_keys=3, ngram_size=3,
-                 scorer=fuzz.ratio):
+                 scorer=fuzz.ratio, chunksize=100):
         """
         Parameters
         ----------
@@ -615,6 +616,10 @@ class LSHDict(_FuzzyDictBase):
             Default scoring function to use to narrow `n_candidates` keys down
             to `n_keys`. Should be a fuzzywuzzy function where scores lie in
             [0, 100] and higher values indicate high similarity.
+        chunksize: int
+            Determines how many items to send to each process when hashing
+            all the keys in the input data using multiprocessing. The default
+            should be fine in most cases.
         """
         if len(data) < 10_000 and len(next(iter(data))) < 100:
             warnings.warn(
@@ -628,6 +633,7 @@ class LSHDict(_FuzzyDictBase):
         self.scorer = scorer
         self.hash_word = partial(self.lsh_hash_word, n=ngram_size)
         self.forest = MinHashLSHForest(num_perm=128)
+        self.chunksize = chunksize
         self._initialize_forest()
 
         # Datasketch's LSH implementation usually gives pretty decent results
@@ -645,19 +651,22 @@ class LSHDict(_FuzzyDictBase):
         keys can be extremely slow.
         """
         super().__setitem__(key, val)
-        self._update_forest(key, val)
+        self._update_forest(key)
 
-    def _update_forest(self, key, val, index=True):
+    def _update_forest(self, key, index=True):
         """Used in __setitem__ to update our LSH Forest. Forest's index method
         seems to recompute everything so adding items to a large LSHDict will
         be incredibly slow. Luckily, our deep learning use case rarely/never
         requires us to update object2index dicts after instantiation so that's
         not as troubling as it might seem.
 
+        This used to be used by _initialize_forest as well but it didn't lend
+        itself to parallelization as well since it acts on a shared, existing
+        data structure.
+
         Parameters
         ----------
         key: str
-        val: any
         index: bool
             If True, reindex the forest (essentially making the key
             queryable). This should be False when initializing the forest so
@@ -671,8 +680,10 @@ class LSHDict(_FuzzyDictBase):
         necessary because dict specifically calls its own __setitem__, not
         its children's.
         """
-        for k, v in tqdm(self.items()):
-            self._update_forest(k, v, False)
+        hashes = parallelize(self.hash_word, self.keys(), total=len(self),
+                             chunksize=self.chunksize)
+        for hash_, key in zip(hashes, self.keys()):
+            self.forest.add(key, hash_)
         self.forest.index()
 
     @add_docstring(_FuzzyDictBase._filter_similarity_pairs)
