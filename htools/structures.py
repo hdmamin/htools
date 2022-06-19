@@ -562,7 +562,7 @@ class _FuzzyDictBase(dict):
             )
 
 
-class NewLSHDict(_FuzzyDictBase):
+class LSHDict(_FuzzyDictBase):
     """Dictionary that returns the value corresponding to a key's nearest
     neighbor if the key isn't present in the dict. This is intended for use
     as a word2index dict when using embeddings in deep learning: e.g. if we
