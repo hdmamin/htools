@@ -5,7 +5,8 @@ matplotlib
 multipledispatch
 numpy
 pandas
-pandas_flavor
+# Later versions of pandas_flavor sometimes cause installation problems.
+pandas_flavor==0.1.2
 pyperclip
 scikit-learn
 tqdm
