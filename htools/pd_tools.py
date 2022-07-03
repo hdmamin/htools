@@ -1,12 +1,10 @@
 from functools import partial
 from IPython.display import display, HTML
-import matplotlib.pyplot as plt
 from numbers import Number
 import numpy as np
 import operator
 import pandas as pd
 import pandas_flavor as pf
-from sklearn.model_selection import KFold
 
 from htools.core import spacer
 from htools import set_module_global
@@ -201,6 +199,18 @@ def target_encode(df, x, y, n=5, stat='mean', shuffle=True, state=None,
     pd.DataFrame or None
     """
     assert df_val is None or inplace, 'To encode df_val, inplace must be True.'
+    # In practice I basically never use this method and I want to remove the
+    # module-level sklearn import and library dependency. However, I don't want
+    # to remove it from the library entirely (in most cases it will be
+    # installed anyway, and if it's not I almost certainly won't be needing
+    # this method).
+    try:
+        from sklearn.model_selection import KFold
+    except ImportError:
+        raise RuntimeError('sklearn must be installed to use target_encode '
+                           'method.')
+
+
     # Prevents SettingWithCopy warning, which is not actually an issue here.
     pd.options.mode.chained_assignment = None
 
@@ -497,7 +507,13 @@ def verbose_plot(df, nrows=None, **kwargs):
     """
     df.plot(**kwargs)
     df.head(nrows).pprint()
-    plt.show()
+    # I like doing this but it's usually not necessary since this is for
+    # notebook use. I wanted to remove the matplotlib import from this module
+    # though.
+    try:
+        plt.show()
+    except:
+        pass
 
 
 @pf.register_dataframe_method
