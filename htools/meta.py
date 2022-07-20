@@ -353,6 +353,14 @@ class LoggerMixin:
             logger.addHandler(handler)
         return logger
 
+    def remove_stdout_handler(self):
+        """Stop logger from logging to stdout. Do not change this to mutate
+        self.handlers - that doesn't work. Probably means I need to
+        debug `delegate` a bit.
+        """
+        self.logger.handlers = [handler for handler in self.logger.handlers
+                                if 'stdout' not in str(handler)]
+
 
 @delegate('logger')
 class MultiLogger(LoggerMixin):
