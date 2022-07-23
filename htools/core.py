@@ -23,6 +23,7 @@ from subprocess import run, check_output
 import sys
 import time
 from tqdm.auto import tqdm
+import warnings
 import wordninja as wn
 
 from htools.config import get_credentials, get_default_user
@@ -1815,6 +1816,78 @@ def random_str(length, lower=False, valid=tuple(ascii_letters + '0123456789')):
     """
     text = ''.join(choices(valid, k=length))
     return text.lower() if lower else text
+
+
+def is_ipy_name(name):
+    """Check if a variable name looks like an ipython output cell, e.g.
+    "_49", "_", or "__".
+    
+    Parameters
+    ----------
+    name: str
+
+    Returns
+    -------
+    bool: True if it looks like an ipython output cell name, False otherwise.
+    """
+    stripped = name.lstrip('_')
+    return name[0] == '_' and (stripped.isdigit() or not stripped)
+
+
+def varname(x, *skip, skip_ipy_names=True, strict=True):
+    """Try to guess name of a variable.
+
+    Parameters
+    ----------
+    x: any
+        Object we'd like to programmatically get the name of.
+    skip: str
+        Optionally provide one or more strings that we want to exclude from our
+        candidates. See Examples for a common use case.
+    skip_ipy_names: bool
+        Ignore names that look like the variable ipython uses to store cell
+        outputs, e.g. "_49", "_", "___".
+    strict: bool
+        If True and multiple candidate names are found (e.g. two variables
+        with the same integer value will have the same ID), raise an error.
+        If False, only warn when that happens and return a list of all matches.
+
+    Returns
+    -------
+    str
+
+    Examples
+    --------
+    # Notice we do have to tell the function to skip the name 'df' in this case
+    # because that variable temporarily points to the df of interest.
+    res = {}
+    for df in (train, val, test):
+        res[varname(df, 'df')] = process(df)
+    res.keys()
+
+    ['train', 'val', 'test']
+    """
+    skip = set(skip)
+    id_ = id(x)
+    matches = set(
+        k for k, v in globals().items() if id(v) == id_
+        and (not skip_ipy_names or not is_ipy_name(k))
+    )
+    matches = list(matches - skip)
+    n_matches = len(matches)
+    if strict and n_matches > 1:
+        raise RuntimeError(
+            f'Found {n_matches} matching names: {matches}. '
+            'Set strict=False to return a list of candidates in this scenario.'
+        )
+    elif n_matches > 1:
+        warnings.warn(f'Found {n_matches} matches: {matches}. '
+                      'Returning all of them because strict=False.')
+        return matches
+    elif not matches:
+        raise RuntimeError(
+            f'Found zero matching variable names for input: {x}')
+    return matches[0]
 
 
 SENTINEL = object()
