@@ -2114,6 +2114,46 @@ def min_wait(seconds):
     return decorator
 
 
+def mutable_cache(**preproc_funcs):
+    """Cache function outputs like functools.lru_cache but allow mutable
+    inputs. You can specify preprocessing functions for earch arg (or a subset
+    of them) which will be called on the input before they are hashed.
+
+    Parameters
+    ----------
+    preproc_funcs: function
+        Optionally specify one or more functions (up to one per arg) to apply
+        to the decorated function's arguments before attempting to hash them.
+        For example, a list argument could be cast to a tuple before hashing.
+        See Examples. (Note: args that do not receive a preprocesisng func
+        will simply be hashed directly. They WILL still be part of the
+        conditions for identifying if we have a cached result.)
+
+    Examples
+    --------
+    @mutable_cache(seq=tuple, T=id)
+    def seq_probs(seq, T):
+        # Do something
+    """
+    cache = {}
+    def decorator(func):
+        for name in set(params(func)) - set(preproc_funcs):
+            preproc_funcs[name] = identity
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            bound = bound_args(func, args, kwargs)
+
+            preprocessed = {name: hash(func(bound[name]))
+                            for name, func in preproc_funcs.items()}
+            key = tuple(preprocessed.items())
+            if key not in cache:
+                cache[key] = func(*args, **kwargs)
+            return cache[key]
+        return wrapper
+    return decorator
+
+
 def copy_func(func):
     """Copy a function. Regular copy and deepcopy functionality do not work
     on functions the way they do on most objects. If we want to create a new
