@@ -421,9 +421,16 @@ def module_dependencies(path, package='', exclude_std_lib=True):
         if isinstance(obj, ast.ImportFrom):
             parts = obj.module.split('.')
             if parts[0] == package:
-                assert len(parts) > 1, ('Unexpected import format for: ' +
-                                        obj.module)
-                internal_modules.append('.'.join(parts[1:]))
+                if len(parts) > 1:
+                    internal_modules.append('.'.join(parts[1:]))
+                else:
+                    assert len(obj.names) == 1, \
+                        'Your import seems to have multiple aliases, which ' \
+                        'we don\'t know how to process.'
+                    assert isinstance(obj.names[0], ast.alias), \
+                        f'Expected object name to be an alias but it ' \
+                        f'was {obj.names[0]}.'
+                    internal_modules.append.append(obj.names[0].name)
             else:
                 libs.append(obj.module)
         elif isinstance(obj,  ast.Import):
@@ -475,6 +482,8 @@ def library_dependencies(lib, skip_init=True):
     htools[meta] or htools[core] (for example) instead of all htools
     requirements if we only want to use certain modules.
 
+    Runs in the current working directory.
+
     # TODO: at the moment, this does not support:
     - relative imports
     - nested packages
@@ -483,6 +492,7 @@ def library_dependencies(lib, skip_init=True):
     - libraries whose install name differs from its import name except for
     popular cases like scikit-learn (in other cases, this would return the
     equivalent of "sklearn")
+    - imports like "from library import module as alias"
 
     Parameters
     ----------
@@ -523,12 +533,15 @@ def _libs2readme_str(lib2version):
     return '\n'.join(f'{k}=={v}' if v else k for k, v in lib2version.items())
 
 
-# TODO: might be cleaner to compile all this readme functionality into a single
-# class.
+# TODO: figure out how to handle __init__.py when finding deps (maybe need to
+# wrap each star import in try/except?). Also add extra func so the CLI command
+# for find_dependencies generates text/markdown/yaml/json files we can load in
+# setup.py.
 def make_requirements_file(lib, skip_init=True, make_resolved=False,
                            out_path='../requirements.txt'):
     """Generate a requirements.txt file for a project by extracting imports
-    from the python source code.
+    from the python source code. You must run this from the lib directory, e.g.
+    from something like ~/project/lib/htools.
 
     Parameters
     ----------
@@ -573,11 +586,8 @@ def make_requirements_file(lib, skip_init=True, make_resolved=False,
     return file_str
 
 
-# TODO: figure out how to handle __init__.py when finding deps (maybe need to
-# wrap each star import in try/except?). Also add extra func so the CLI command
-# for find_dependencies generates text/markdown/yaml/json files we can load in
-# setup.py.
-
+# TODO: might be cleaner to compile all this readme functionality into a single
+# class.
 def update_readmes(dirs, default='_'):
     """Update readme files with a table of info about each python file or ipy
     notebook in the relevant directory. This relies on python files having
