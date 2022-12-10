@@ -430,7 +430,7 @@ def module_dependencies(path, package='', exclude_std_lib=True):
                     assert isinstance(obj.names[0], ast.alias), \
                         f'Expected object name to be an alias but it ' \
                         f'was {obj.names[0]}.'
-                    internal_modules.append.append(obj.names[0].name)
+                    internal_modules.append(obj.names[0].name)
             else:
                 libs.append(obj.module)
         elif isinstance(obj,  ast.Import):
