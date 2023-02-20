@@ -429,6 +429,40 @@ def verbose_log(path, fmode='w', fmt='%(message)s'):
     return decorator
 
 
+def monkeypatch(obj, attr):
+    """Decorator to monkeypatch an existing object with a user-defined
+    function. Monkeypatching occurs at the time the function is defined.
+
+    Parameters
+    ----------
+    obj: any
+        The object to monkeypatch.
+    attr: str
+        The attribute to override on obj. Presumably this will be a function.
+
+    Examples
+    --------
+    @monkeypatch(sys, 'excepthook')
+    def excepthook(type_, val, tb):
+        traceback.print_exception(type_, val, tb)
+        pdb.post_mortem(tb)
+
+    sys.excepthook will now equal our `excepthook` function, which causes us
+    to enter a debugging session whenever an error is thrown. Note that this
+    minimal example doesn't seem to work in ipython.
+    """
+    def decorator(func):
+        warnings.warn(f'Registering function {func} as attribute "{attr}" on '
+                      f'object {obj}.')
+        setattr(obj, attr, func)
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 class SaveableMixin:
     """Provide object saving and loading methods. If you want to be able to
     pass a file name rather than a full path to `save`, the object can define
