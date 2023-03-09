@@ -40,7 +40,7 @@ def ipy_excepthook(self, etype, evalue, tb, tb_offset):
 
 
 def disable():
-    """Rever to default behavior.
+    """Revert to default behavior.
     """
     sys.excepthook = default_excepthook
     # Tried doing `ipy.set_custom_exc((Exception,), None)` as suggested by
@@ -52,4 +52,8 @@ def disable():
                                   if x != Exception)
 
 
-ipy.set_custom_exc((Exception,), ipy_excepthook)
+# Only necessary/possible when in ipython.
+try:
+    ipy.set_custom_exc((Exception,), ipy_excepthook)
+except AttributeError:
+    pass
