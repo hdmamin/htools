@@ -1744,20 +1744,26 @@ def random_str(length, lower=False, valid=tuple(ascii_letters + '0123456789')):
     return text.lower() if lower else text
 
 
-def is_ipy_name(name):
+def is_ipy_name(name, check_in_out=False):
     """Check if a variable name looks like an ipython output cell, e.g.
     "_49", "_", or "__".
     
     Parameters
     ----------
     name: str
+    check_in_out: bool
+        If True, check if name is in ['In', 'Out'] (i.e. we consider those to
+        be ipy names as well). If False (the default), skip this check.
 
     Returns
     -------
     bool: True if it looks like an ipython output cell name, False otherwise.
     """
     stripped = name.lstrip('_')
-    return name[0] == '_' and (stripped.isdigit() or not stripped)
+    # First check if it fits the standard leading underscore format.
+    is_under = name[0] == '_' and (stripped.isdigit() or not stripped)
+    is_in_out = check_in_out and stripped in ('In', 'Out')
+    return is_under or is_in_out
 
 
 def varname(x, *skip, skip_ipy_names=True, strict=True):
