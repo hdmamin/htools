@@ -1744,26 +1744,40 @@ def random_str(length, lower=False, valid=tuple(ascii_letters + '0123456789')):
     return text.lower() if lower else text
 
 
-def is_ipy_name(name, check_in_out=False):
+def is_ipy_name(
+        name,
+        count_as_true=('In', 'Out', '_dh', '_ih', '_ii', '_iii', '_oh')
+):
     """Check if a variable name looks like an ipython output cell, e.g.
     "_49", "_", or "__".
+
+    More examples:
+    Returns True for names like (technically not sure if something like "__i3"
+    is actually used in ipython, but it looks like something we probably want
+    to remove in these contexts anyway /shrug):
+    ['_', '__', '_i3', '__i3', '_4', '_9913', '__7', '__23874']
+
+    Returns False for names like
+    ['_a', 'i22', '__0i', '_03z', '__99t']
+    and most "normal" variable names.
     
     Parameters
     ----------
     name: str
-    check_in_out: bool
-        If True, check if name is in ['In', 'Out'] (i.e. we consider those to
-        be ipy names as well). If False (the default), skip this check.
+    count_as_true: Iterable[str]
+        Additional variable names that don't necessarily fit the standard
+        pattern but should nonetheless return True if we encounter them.
 
     Returns
     -------
     bool: True if it looks like an ipython output cell name, False otherwise.
     """
-    stripped = name.lstrip('_')
     # First check if it fits the standard leading underscore format.
-    is_under = name[0] == '_' and (stripped.isdigit() or not stripped)
-    is_in_out = check_in_out and stripped in ('In', 'Out')
-    return is_under or is_in_out
+    # Easier to handle the "only underscores" case separately because we want
+    # to limit the number of underscores for names like "_i3".
+    pat = '^_{1,2}i?\\d*$'
+    is_under = bool(re.match(pat, name)) or not name.strip('_')
+    return is_under or name in count_as_true
 
 
 def varname(x, *skip, skip_ipy_names=True, strict=True):
